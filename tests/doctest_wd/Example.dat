@@ -1,0 +1,6 @@
+"TOA5","TestLogger","CR1000X","12342","CR1000X.Std.03.02","CPU:TestLogger.CR1X","2438","Example"
+"TIMESTAMP","RECORD","BattV_Min"
+"TS","RN","Volts"
+"","","Min"
+"2021-06-19 00:00:00",0,12.99
+"2021-06-20 00:00:00",1,12.96
