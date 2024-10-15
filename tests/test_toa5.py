@@ -168,6 +168,11 @@ class Toa5TestCase(unittest.TestCase):
             self._fake_cli(toa5.to_csv.main, argv=['-cLatin1'], stderr=None,
                 exit_call=(2, 'toa5.to_csv: error: Can only use --out-encoding when specifying an output file\n'))
         with NamedTempFileDeleteLater() as tf:
+            # just for coverage, a test with no data
+            tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nRECORD,BattV_Min\nRN,Volts\n,Min")
+            tf.close()
+            self.assertEqual( self._fake_cli(toa5.to_csv.main, argv=[tf.name]), ['RECORD,BattV_Min[V]'] )
+        with NamedTempFileDeleteLater() as tf:
             tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nRECORD,BattV_Min\nRN,Volts\n,Min\n1,12\n")
             tf.close()
             with self.assertRaises(ValueError):
