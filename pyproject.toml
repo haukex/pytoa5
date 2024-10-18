@@ -7,7 +7,7 @@ name = "PyTOA5"
 description = "Utilities for TOA5 Files"
 version = "0.9.0"
 authors = [ { name="Hauke D", email="haukex@zero-g.net" } ]
-readme = "README.md"
+readme = "README.rst"
 requires-python = ">=3.9"
 dynamic = ["dependencies"]
 # https://pypi.org/classifiers/
@@ -33,6 +33,9 @@ packages = ["toa5", "toa5.to_csv"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
+
+[project.optional-dependencies]
+"test" = ["pandas>=2.2.3"]
 
 [project.scripts]
 toa5-to-csv = "toa5.to_csv:main"

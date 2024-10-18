@@ -24,7 +24,7 @@ build-check: smoke-checks
 	[[ "$$OSTYPE" =~ linux.* ]]
 	$(PYTHON3BIN) -m build --sdist
 	dist_files=(dist/*.tar.gz)
-	$(PYTHON3BIN) -m twine check "$${dist_files[@]}"
+	$(PYTHON3BIN) -m twine check --strict "$${dist_files[@]}"
 	if [[ $${#dist_files[@]} -ne 1 ]]; then echo "More than one dist file:" "$${dist_files[@]}"; exit 1; fi
 	PYTHON3BIN="$(PYTHON3BIN)" dev/isolated-dist-test.sh "$${dist_files[0]}"
 	echo "$${dist_files[@]}"
