@@ -24,7 +24,7 @@ along with this program. If not, see https://www.gnu.org/licenses/
 import re
 import csv
 import importlib
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 from collections.abc import Iterator, Sequence, Generator, Callable
 from igbpyutils.iter import no_duplicates, zip_strict
 
@@ -76,16 +76,18 @@ SHORTER_UNITS = {
 }
 
 def _maybe_prc(col :ColumnHeader, sep :str) -> str:
-    if col.prc and col.prc.lower()!='smp' and not re.search(re.escape(col.prc)+r'(?:\(\d+\))?\Z', col.name, re.I):
+    """Append the :attr:`~ColumnHeader.prc` if it's not "Smp" and it's not already present at the end of the :attr:`~ColumnHeader.name`."""
+    if col.prc and col.prc.lower()!='smp' and not re.search(re.escape(col.prc)+r'(?:\([^)]*\))?\Z', col.name, re.I):
         return col.name + sep + col.prc
     return col.name
 
-_sql_parens_re = re.compile(r'\((\d+)\)\Z')
+_sql_trans_re = re.compile(r'[^A-Za-z_0-9]+')
+_sql_under_re = re.compile(r'_{2,}')
 def sql_col_hdr_transform(col :ColumnHeader) -> str:
     """TODO: Doc"""
-    return _sql_parens_re.sub(r'_\1', _maybe_prc(col, '_') ).lower()
+    return _sql_under_re.sub('_', _sql_trans_re.sub('_', _maybe_prc(col, '_'))).strip('_').lower()
 
-def default_col_hdr_transform(col :ColumnHeader):
+def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[str,str]] = None):
     """The default function used to transform a :class:`ColumnHeader` into a single string.
 
     This conversion is slightly opinionated and will:
@@ -95,11 +97,13 @@ def default_col_hdr_transform(col :ColumnHeader):
     - use square brackets around the units, and
     - ignore the "TS" and "RN" "units" on the "TIMESTAMP" and "RECORD" columns, respectively.
     """
+    if short_units is None:  # pragma: no branch
+        short_units = SHORTER_UNITS
     c = _maybe_prc(col, '/')
     if col.unit and \
             not ( col.name=='TIMESTAMP' and col.unit=='TS' or col.name=='RECORD' and col.unit=='RN' ) \
-            and len(SHORTER_UNITS.get(col.unit, col.unit)):
-        c += "[" + SHORTER_UNITS.get(col.unit, col.unit) + "]"
+            and len(short_units.get(col.unit, col.unit)):
+        c += "[" + short_units.get(col.unit, col.unit) + "]"
     return c
 
 #: A short alias for :func:`default_col_hdr_transform`.

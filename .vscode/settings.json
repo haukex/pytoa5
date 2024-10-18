@@ -28,9 +28,12 @@
     ],
     "cSpell.ignoreWords": [
         "Pushd",
+        "battv",
         "hexversion",
         "igbpyutils",
         "openhook",
+        "ptemp",
+        "relhumid",
         "unitless"
     ],
 }

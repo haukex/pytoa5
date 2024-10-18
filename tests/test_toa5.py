@@ -111,6 +111,7 @@ class Toa5TestCase(unittest.TestCase):
             for ch, cn, sq in tp:
                 self.assertEqual(toa5.default_col_hdr_transform(ch), cn)
                 self.assertEqual(toa5.sql_col_hdr_transform(ch), sq)
+        self.assertEqual(toa5.sql_col_hdr_transform(toa5.ColumnHeader('__Fö-x__Avg(1,2)','xyz','Avg')), 'f_x_avg_1_2')
 
     def test_pandas(self):
         fh = io.StringIO(

@@ -67,7 +67,9 @@ def main():
         if args.require_timestamp and columns[0] != ColumnHeader(name='TIMESTAMP', unit='TS'):
             raise ValueError("First column was not a timestamp (if that's not an error, turn off `require_timestamp0`)")
         csv_wr.writerow( col_trans(c) for c in columns )
-        for ri, row in enumerate(csv_rd, start=5):  # pragma: no branch  #TODO Later: why is this pragma needed here on Py 3.12+?
+        #TODO Later: That the following pragma is needed on Python 3.12+ appears to be a regression in Coverage.py
+        # from 7.6.1 -> 7.6.2; keep an eye on whether that gets fixed
+        for ri, row in enumerate(csv_rd, start=5):  # pragma: no branch
             if not args.allow_jagged and len(row)!=len(columns):
                 raise ValueError(f"Row {ri}: expected {len(columns)} columns but got {len(row)}")
             csv_wr.writerow(row)
