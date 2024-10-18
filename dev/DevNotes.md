@@ -7,6 +7,7 @@ Identical to <https://github.com/haukex/my-py-templ/blob/main/dev/DevNotes.md> e
   - Build deps: `( cd docs && make installdeps )`
   - The changelog is at `docs/index.rst`
   - Build: `( cd docs && make clean all )`,
-    but the actual documentation is built on GitHub
-  - Check <https://github.com/haukex/pytoa5/actions/workflows/pages.yml> to make sure docs are building there
+    but the actual live documentation is built on GitHub
+  - Check <https://github.com/haukex/pytoa5/actions/workflows/pages.yml>
+    to make sure docs are building there
   - `git clean -dxf docs/html`

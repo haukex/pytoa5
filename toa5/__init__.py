@@ -62,20 +62,27 @@ class Toa5Error(RuntimeError):
     """An error class for :func:`read_header`."""
 
 class EnvironmentLine(NamedTuple):
-    """Represents a TOA5 "Environment Line", giving details about the data logger and its program."""
+    """Named tuple representing a TOA5 "Environment Line", giving details about the data logger and its program."""
+    #: Station (data logger) name
     station_name :str
+    #: Model number of the data logger
     logger_model :str
+    #: Serial number of the data logger
     logger_serial :str
+    #: Data logger operating system and version
     logger_os :str
+    #: The name of the program on the data logger
     program_name :str
+    #: The program's signature (checksum)
     program_sig :str
+    #: The name of the table contained in this TOA5 file
     table_name :str
 
 class ColumnHeader(NamedTuple):
     """Named tuple representing a column header.
 
     This class represents a column header as it would be read from a text (CSV) file, therefore,
-    when fields are empty, this is represented by empty strings, not by ``None``.
+    when optional fields are empty, this is represented by empty strings, not by ``None``.
     """
     #: Column name
     name :str
@@ -210,8 +217,8 @@ def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = Fals
     return EnvironmentLine(**env_line_dict), columns
 
 def write_header(env_line :EnvironmentLine, columns :Sequence[ColumnHeader]) -> Generator[Sequence[str], None, None]:
-    """Convert an :class:`EnvironmentLine` and sequence of :class:`ColumnHeader` objects into the four TOA5 header rows,
-    suitable for use in e.g. :meth:`~csv.csvwriter.writerows`."""
+    """Convert an :class:`EnvironmentLine` and sequence of :class:`ColumnHeader` objects back
+    into the four TOA5 header rows, suitable for use in e.g. :meth:`~csv.csvwriter.writerows`."""
     yield ('TOA5',)+env_line
     yield tuple( c.name for c in columns )
     yield tuple( c.unit for c in columns )
