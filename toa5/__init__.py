@@ -1,5 +1,35 @@
 """
-TODO: Document
+TOA5 files are essentially CSV files that have four header rows:
+
+1. The "environment line": :class:`EnvironmentLine`
+2. The column header names: :attr:`ColumnHeader.name`
+3. The columns' units: :attr:`ColumnHeader.unit`
+4. The columns' "data process": :attr:`ColumnHeader.prc`
+
+.. autofunction:: read_header
+
+.. autofunction:: read_pandas
+
+.. autoclass:: EnvironmentLine
+    :members:
+    :undoc-members:
+
+.. autoclass:: ColumnHeader
+    :members:
+
+.. autofunction:: write_header
+
+.. autoclass:: ColumnHeaderTransformer
+
+.. autofunction:: default_col_hdr_transform
+
+.. autofunction:: short_name
+
+.. autodata:: SHORTER_UNITS
+
+.. autofunction:: sql_col_hdr_transform
+
+.. autoexception:: Toa5Error
 
 Author, Copyright, and License
 ------------------------------
@@ -44,7 +74,7 @@ class EnvironmentLine(NamedTuple):
 class ColumnHeader(NamedTuple):
     """Named tuple representing a column header.
 
-    This class represents a column header as it would be read from a text file, therefore,
+    This class represents a column header as it would be read from a text (CSV) file, therefore,
     when fields are empty, this is represented by empty strings, not by ``None``.
     """
     #: Column name
@@ -58,7 +88,7 @@ class ColumnHeader(NamedTuple):
 ColumnHeaderTransformer = Callable[[ColumnHeader], str]
 
 #: A table of shorter versions of common units, used in :func:`default_col_hdr_transform`.
-SHORTER_UNITS = {
+SHORTER_UNITS :dict[str, str] = {
     "meters/second": "m/s",
     "Deg C": "°C",
     "oC": "°C",
@@ -84,7 +114,15 @@ def _maybe_prc(col :ColumnHeader, sep :str) -> str:
 _sql_trans_re = re.compile(r'[^A-Za-z_0-9]+')
 _sql_under_re = re.compile(r'_{2,}')
 def sql_col_hdr_transform(col :ColumnHeader) -> str:
-    """TODO: Doc"""
+    """An alternative function that transforms a :class:`ColumnHeader` to a string suitable for use in SQL.
+
+    - appends :attr:`ColumnHeader.prc` (unless the name already ends with it)
+    - any characters that are not ASCII letters or numbers are converted to underscores
+    - the returned name is all-lowercase
+    - units are omitted (these could be stored in an SQL column comment, for example)
+
+    :param col: The :class:`ColumnHeader` to process.
+    """
     return _sql_under_re.sub('_', _sql_trans_re.sub('_', _maybe_prc(col, '_'))).strip('_').lower()
 
 def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[str,str]] = None):
@@ -93,9 +131,13 @@ def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[s
     This conversion is slightly opinionated and will:
 
     - append :attr:`ColumnHeader.prc` with a slash (unless the name already ends with it or it is "Smp"),
-    - shorten some units (:data:`SHORTER_UNITS`),
-    - use square brackets around the units, and
+    - use square brackets around the units and shorten some of them, and
     - ignore the "TS" and "RN" "units" on the "TIMESTAMP" and "RECORD" columns, respectively.
+
+    :param col: The :class:`ColumnHeader` to process.
+    :param short_units: A lookup table in which the keys are the original unit names as
+        they appear in the TOA5 file, and the values are a shorter version of that unit.
+        If not provided, defaults to :data:`SHORTER_UNITS`.
     """
     if short_units is None:  # pragma: no branch
         short_units = SHORTER_UNITS
@@ -110,10 +152,10 @@ def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[s
 short_name = default_col_hdr_transform
 
 _env_line_keys = ('toa5',) + EnvironmentLine._fields
-def read_header(csv_reader :Iterator[Sequence[str]]) -> tuple[EnvironmentLine, tuple[ColumnHeader, ...]]:
+def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = False) -> tuple[EnvironmentLine, tuple[ColumnHeader, ...]]:
     """Read the header of a TOA5 file.
 
-    A common use case to read a TOA5 file would be the following; as you can see the main difference
+    A common use case to read a TOA5 file would be the following; as you can see, the main difference
     between reading a regular CSV file and a TOA5 file is the additional call to this function.
 
     >>> import csv
@@ -128,9 +170,11 @@ def read_header(csv_reader :Iterator[Sequence[str]]) -> tuple[EnvironmentLine, t
     ['2021-06-19 00:00:00', '0', '12.99']
     ['2021-06-20 00:00:00', '1', '12.96']
 
-    :param csv_reader: TODO Doc
-    :return: TODO Doc
-    :raises Toa5Error: TODO Doc
+    :param csv_reader: The :func:`csv.reader` object to read the header rows from. Only the header is read from the file,
+        so after you call this function, you can use the reader to read the data rows from the input file.
+    :param allow_dupes: Whether or not to allow duplicates in the :attr:`ColumnHeader.name` values.
+    :return: Returns an :class:`EnvironmentLine` object and a tuple of :class:`ColumnHeader` objects.
+    :raises Toa5Error: In case any error is encountered while reading the TOA5 header.
     """
     # ### Read the environment line
     try:
@@ -157,15 +201,17 @@ def read_header(csv_reader :Iterator[Sequence[str]]) -> tuple[EnvironmentLine, t
     # ### Do some checks on the header
     if len(field_names) != len(units) or len(field_names) != len(proc):
         raise Toa5Error("header column count mismatch")
-    try:
-        set(no_duplicates(field_names, name='column name'))
-    except ValueError as ex:
-        raise Toa5Error(*ex.args)  # pylint: disable=raise-missing-from  # (we're just stealing the error message)
+    if not allow_dupes:
+        try:
+            set(no_duplicates(field_names, name='column name'))
+        except ValueError as ex:
+            raise Toa5Error(*ex.args)  # pylint: disable=raise-missing-from  # (we're just stealing the error message)
     columns = tuple( ColumnHeader(*c) for c in zip_strict(field_names, units, proc) )
     return EnvironmentLine(**env_line_dict), columns
 
 def write_header(env_line :EnvironmentLine, columns :Sequence[ColumnHeader]) -> Generator[Sequence[str], None, None]:
-    """TODO: Doc"""
+    """Convert an :class:`EnvironmentLine` and sequence of :class:`ColumnHeader` objects into the four TOA5 header rows,
+    suitable for use in e.g. :meth:`~csv.csvwriter.writerows`."""
     yield ('TOA5',)+env_line
     yield tuple( c.name for c in columns )
     yield tuple( c.unit for c in columns )
@@ -186,8 +232,10 @@ def read_pandas(fh, *, col_trans :ColumnHeaderTransformer = default_col_hdr_tran
     EnvironmentLine(station_name='TestLogger', logger_model='CR1000X', logger_serial='12342',
     logger_os='CR1000X.Std.03.02', program_name='CPU:TestLogger.CR1X', program_sig='2438', table_name='Example')
 
-    :param fh: TODO Doc
-    :param col_trans: TODO Doc
+    :param fh: The file object from which to read the TOA5 data. Should be opened with
+        the correct encoding and the ``newlines`` argument set to the empty string ``""``.
+    :param col_trans: The :class:`ColumnHeaderTransformer` to use to convert the :class:`ColumnHeader` objects
+        into column names. Defaults to :func:`default_col_hdr_transform`
     :param kwargs: Additional keyword arguments are passed through to ``pandas.read_csv``.
         Not allowed are ``filepath_or_buffer``, ``header``, and ``names``.
         Other options that this function provides by default, such as ``na_values`` or ``index_col``, may be overridden.

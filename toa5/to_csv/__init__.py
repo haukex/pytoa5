@@ -1,4 +1,13 @@
-"""See :func:`main`.
+"""
+Command-Line TOA5-to-CSV Tool
+-----------------------------
+
+The following is a command-line interface to convert a TOA5 file's headers to a
+single row, which makes it more suitable for processing in other programs that
+expect CSV files with a single header row.
+
+If this module and its scripts have been installed correctly, you should be able
+to run ``toa5-to-csv --help`` or ``python -m toa5.to_csv --help`` for details.
 
 Author, Copyright, and License
 ------------------------------
@@ -25,17 +34,12 @@ import sys
 import json
 import argparse
 import fileinput
+from typing import Optional, Sequence
 from igbpyutils.file import open_out
 from igbpyutils.error import init_handlers
 from .. import read_header, ColumnHeader, ColumnHeaderTransformer, default_col_hdr_transform
 
-def main():
-    """Command-line interface to convert a TOA5 file's headers to a single row, suitable for use in CSV.
-
-    If this module and its scripts have been installed correctly, you should be able to run ``toa5-to-csv --help``
-    or ``python -m toa5.to_csv --help`` for details.
-    """
-    init_handlers()
+def _arg_parser():
     parser = argparse.ArgumentParser('toa5.to_csv', description='TOA5 to CSV Converter')
     parser.add_argument('-o', '--out-file', help="Output filename")
     parser.add_argument('-l', '--env-line', metavar='ENV_LINE_FILE', help="JSON file to write environment line to")
@@ -47,7 +51,12 @@ def main():
     parser.add_argument('-t', '--require-timestamp', help="Require first column to be TIMESTAMP", action="store_true")
     parser.add_argument('-j', '--allow-jagged', help="Allow rows to have differing column counts", action="store_true")
     parser.add_argument('toa5file', metavar='TOA5FILE', help="The TOA5 file to process", nargs='?')
-    args = parser.parse_args()
+    return parser
+
+def main(argv :Optional[Sequence[str]] = None):
+    init_handlers()
+    parser = _arg_parser()
+    args = parser.parse_args(argv)
 
     if args.in_encoding!='UTF-8' and (not args.toa5file or args.toa5file=='-'):
         parser.error('Can only use --in-encoding when specifying an input file')

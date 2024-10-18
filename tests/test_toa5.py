@@ -22,11 +22,11 @@ along with this program. If not, see https://www.gnu.org/licenses/
 """
 import io
 import os
-import sys
 import csv
 import doctest
 import unittest
 from pathlib import Path
+from functools import partial
 from unittest.mock import patch
 from typing import Optional, Any
 from collections.abc import Callable, Sequence
@@ -145,12 +145,12 @@ class Toa5TestCase(unittest.TestCase):
 
     def test_to_csv_cli(self):
         with Pushd(Path(__file__).parent/'doctest_wd'):
-            self.assertEqual( self._fake_cli(toa5.to_csv.main, argv=['-t','Example.dat']), [
+            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-t','Example.dat'])), [
                 'TIMESTAMP,RECORD,BattV_Min[V]',
                 '2021-06-19 00:00:00,0,12.99',
                 '2021-06-20 00:00:00,1,12.96',
             ] )
-            self.assertEqual( self._fake_cli(toa5.to_csv.main, argv=['-l-','-nt','Example.dat']), [
+            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-l-','-nt','Example.dat'])), [
                 'TIMESTAMP,RECORD,BattV_Min',
                 '2021-06-19 00:00:00,0,12.99',
                 '2021-06-20 00:00:00,1,12.96',
@@ -164,39 +164,34 @@ class Toa5TestCase(unittest.TestCase):
                 '  "table_name": "Example"',
                 '}'
             ] )
-            self._fake_cli(toa5.to_csv.main, argv=['-eLatin1'], stderr=None,
+            self._fake_cli(partial(toa5.to_csv.main,['-eLatin1']), stderr=None,
                 exit_call=(2, 'toa5.to_csv: error: Can only use --in-encoding when specifying an input file\n'))
-            self._fake_cli(toa5.to_csv.main, argv=['-cLatin1'], stderr=None,
+            self._fake_cli(partial(toa5.to_csv.main,['-cLatin1']), stderr=None,
                 exit_call=(2, 'toa5.to_csv: error: Can only use --out-encoding when specifying an output file\n'))
         with NamedTempFileDeleteLater() as tf:
             # just for coverage, a test with no data
             tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nRECORD,BattV_Min\nRN,Volts\n,Min")
             tf.close()
-            self.assertEqual( self._fake_cli(toa5.to_csv.main, argv=[tf.name]), ['RECORD,BattV_Min[V]'] )
+            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,[tf.name])), ['RECORD,BattV_Min[V]'] )
         with NamedTempFileDeleteLater() as tf:
             tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nRECORD,BattV_Min\nRN,Volts\n,Min\n1,12\n")
             tf.close()
             with self.assertRaises(ValueError):
-                self._fake_cli(toa5.to_csv.main, argv=['-t',tf.name])
+                self._fake_cli(partial(toa5.to_csv.main,['-t',tf.name]))
         with NamedTempFileDeleteLater() as tf:
             tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nTIMESTAMP,RECORD,BattV_Min\nTS,RN,Volts\n,,Min\n\"2021-06-19 00:00:00\",1")
             tf.close()
             with self.assertRaises(ValueError):
-                self._fake_cli(toa5.to_csv.main, argv=[tf.name])
+                self._fake_cli(partial(toa5.to_csv.main,[tf.name]))
 
-    def _fake_cli(self, target :Callable[[], None], *, argv :Sequence[str] = (),
+    def _fake_cli(self, main :Callable[[], None], *,
                   exit_call :Sequence[Any] = (0,), stderr :Optional[str] = '' ) -> list[str]:
-        prev_argv = sys.argv
-        try:
-            sys.argv = [os.path.basename(target.__name__)] + list(argv)
-            with (redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err,
-                  patch('argparse.ArgumentParser.exit', side_effect=SystemExit) as mock_exit):
-                try:
-                    target()
-                except SystemExit:
-                    pass
-        finally:
-            sys.argv = prev_argv
+        with (redirect_stdout(io.StringIO()) as out, redirect_stderr(io.StringIO()) as err,
+              patch('argparse.ArgumentParser.exit', side_effect=SystemExit) as mock_exit):
+            try:
+                main()
+            except SystemExit:
+                pass
         mock_exit.assert_called_once_with(*exit_call)
         if stderr is not None:
             self.assertEqual(err.getvalue(), stderr)

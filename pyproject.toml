@@ -38,9 +38,10 @@ dependencies = {file = ["requirements.txt"]}
 toa5-to-csv = "toa5.to_csv:main"
 
 [project.urls]
+"Documentation" = "https://haukex.github.io/pytoa5"
 "Repository" = "https://github.com/haukex/pytoa5"
 "Bug Tracker" = "https://github.com/haukex/pytoa5/issues"
-"Changelog" = "https://github.com/haukex/pytoa5/blob/main/CHANGELOG.md"
+"Changelog" = "https://haukex.github.io/pytoa5#changelog"
 
 # ##### ##### ##### ##### ##### Hauke's Python Type Checker / Linter Settings ##### ##### ##### ##### #####
 
