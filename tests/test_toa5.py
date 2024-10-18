@@ -106,6 +106,11 @@ class Toa5TestCase(unittest.TestCase):
                 with self.assertRaises(toa5.Toa5Error):
                     toa5.read_header(csv_rd)
 
+        dupe_cols = ( ('TOA5','sn','lm','ls','os','pn','ps','tn'),('Foo','Foo'),('',''),('','') )
+        with self.assertRaises(toa5.Toa5Error):
+            toa5.read_header(iter(dupe_cols))
+        toa5.read_header(iter(dupe_cols), allow_dupes=True)
+
     def test_col_trans(self):
         for tp in _exp_hdr.values():
             for ch, cn, sq in tp:
