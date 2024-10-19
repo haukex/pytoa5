@@ -6,6 +6,8 @@ TOA5 files are essentially CSV files that have four header rows:
 3. The columns' units: :attr:`ColumnHeader.unit`
 4. The columns' "data process": :attr:`ColumnHeader.prc`
 
+The following two functions can be used to read files with this header:
+
 .. autofunction:: read_header
 
 .. autofunction:: read_pandas
@@ -139,7 +141,12 @@ def sql_col_hdr_transform(col :ColumnHeader) -> str:
     .. warning::
         This transformation can potentially result in two columns on the same table
         having the same name, for example, this would be the case with
-        ``ColumnHeader("Test_1","Volts","")`` and ``ColumnHeader("Test(1)","","Smp")``.
+        ``ColumnHeader("Test_1","Volts","")`` and ``ColumnHeader("Test(1)","","Smp")``,
+        which would both result in ``"test_1"``.
+
+        Therefore, it is **strongly recommended** that you check for duplicate
+        column names after using this transformer. For example, see
+        :func:`more_itertools.classify_unique`.
 
     :param col: The :class:`ColumnHeader` to process.
     """
@@ -158,7 +165,8 @@ def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[s
         Although unlikely in practice (because column names usually only consist of letters, numbers,
         and underscores, plus indices in parentheses), in theory, this transformation can result in
         two columns on the same table having the same header. For example, this would be the case
-        with ``ColumnHeader("Test","","Min")`` and ``ColumnHeader("Test/Min","","Smp")``.
+        with ``ColumnHeader("Test","","Min")`` and ``ColumnHeader("Test/Min","","Smp")``, which would
+        both result in ``"Test/Min"``.
 
     :param col: The :class:`ColumnHeader` to process.
     :param short_units: A lookup table in which the keys are the original unit names as
@@ -255,8 +263,8 @@ def write_header(env_line :EnvironmentLine, columns :Sequence[ColumnHeader]) -> 
 
 def read_pandas(filepath_or_buffer, *, encoding :str = 'UTF-8', encoding_errors :str = 'strict',
                 col_trans :ColumnHeaderTransformer = default_col_hdr_transform, **kwargs):
-    """A helper function to read TOA5 files into a Pandas DataFrame with
-    `pandas.read_csv <https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html>`_.
+    """A helper function to read TOA5 files into a :class:`pandas.DataFrame`.
+    Uses :func:`pandas.read_csv` internally.
 
     >>> import toa5, pandas
     >>> df = toa5.read_pandas('Example.dat', low_memory=False)
@@ -272,15 +280,20 @@ def read_pandas(filepath_or_buffer, *, encoding :str = 'UTF-8', encoding_errors 
         table_name='Example')
 
     :param filepath_or_buffer: A filename or file object from which to read the TOA5 data.
-        *Unlike* ``pandas.read_csv``, URLs are not accepted, only such filenames that Python's :func:`open` accepts.
+
+        .. note::
+            Unlike :func:`pandas.read_csv`, URLs are not accepted, only such filenames that Python's :func:`open` accepts.
+
     :param col_trans: The :class:`ColumnHeaderTransformer` to use to convert the :class:`ColumnHeader` objects
         into column names. Defaults to :func:`default_col_hdr_transform`
-    :param kwargs: Any additional keyword arguments are passed through to ``pandas.read_csv``.
-        It is **not recommended** to set ``header`` and ``names``, since they are controlled by this function.
+    :param kwargs: Any additional keyword arguments are passed through to :func:`pandas.read_csv`.
+        It is **not recommended** to set ``header`` and ``names``, since they are provided by this function.
         Other options that this function provides by default, such as ``na_values`` or ``index_col``, may be overridden.
-    :return: A Pandas DataFrame.
-        The :class:`EnvironmentLine` is stored in the DataFrame's ``attrs`` under the key ``toa5_env_line``.
-        Note that, at the time of writing, Pandas documents ``attrs`` as being experimental.
+    :return: A :class:`pandas.DataFrame`.
+        The :class:`EnvironmentLine` is stored in :attr:`pandas.DataFrame.attrs` under the key ``"toa5_env_line"``.
+
+        .. note::
+            At the time of writing, :attr:`pandas.DataFrame.attrs` is documented as being experimental.
     """
     pd = importlib.import_module('pandas')
     cm :Any

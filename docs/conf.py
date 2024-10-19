@@ -27,7 +27,11 @@ autodoc_member_order = 'bysource'
 
 html_theme = 'furo'
 
-intersphinx_mapping = { 'python': ('https://docs.python.org/3', None) }
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'more-itertools': ('https://more-itertools.readthedocs.io/en/stable/', None),
+    'pandas': ('https://pandas.pydata.org/docs/', None),
+}
 
 def process_docstring(app, what, name, obj, options, lines :list[str]):  # pylint: disable=too-many-positional-arguments,unused-argument  # noqa: E501
     if what=='module':

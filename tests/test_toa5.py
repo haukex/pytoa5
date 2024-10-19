@@ -124,8 +124,10 @@ class Toa5TestCase(unittest.TestCase):
         # test some claims from the documentation
         self.assertEqual(toa5.default_col_hdr_transform(toa5.ColumnHeader("Test","","Min")),
                          toa5.default_col_hdr_transform(toa5.ColumnHeader("Test/Min","","Smp")) )
+        self.assertEqual(toa5.default_col_hdr_transform(toa5.ColumnHeader("Test","","Min")), "Test/Min" )
         self.assertEqual(toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test_1","Volts","")),
                          toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test(1)","","Smp")))
+        self.assertEqual(toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test_1","Volts","")), "test_1" )
 
     def test_pandas(self):
         el = toa5.EnvironmentLine(station_name='sn', logger_model='lm', logger_serial='ls', logger_os='os',
