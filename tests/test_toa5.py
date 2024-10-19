@@ -250,21 +250,34 @@ class Toa5TestCase(unittest.TestCase):
             tf.close()
             with self.assertRaises(ValueError):
                 self._fake_cli(partial(toa5.to_csv.main,[tf.name]))
-            self._fake_cli(partial(toa5.to_csv.main,['-j',tf.name]))
-        # test with dupe column names
+            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-j',tf.name])), [
+                "TIMESTAMP,RECORD,BattV_Min[V]", "2021-06-19 00:00:00,1" ] )
+        # --allow-dupes
+        with NamedTempFileDeleteLater() as tf:
+            tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nFoo,Foo\n,\nSmp,Min")
+            tf.close()
+            with self.assertRaises(toa5.Toa5Error):
+                self._fake_cli(partial(toa5.to_csv.main,[tf.name]))
+            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-a',tf.name])), ["Foo,Foo/Min"] )
+        # test with dupe column names after transform
         with NamedTempFileDeleteLater() as tf:
             tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nxy/Min,xy\n,\nSmp,Min")
             tf.close()
             with self.assertRaises(ValueError):
                 self._fake_cli(partial(toa5.to_csv.main,[tf.name]))
-            self._fake_cli(partial(toa5.to_csv.main,['-n',tf.name]))
+            # --allow-dupes
+            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-a',tf.name])), ["xy/Min,xy/Min"] )
+            # not a dupe with --simple--names
+            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-n',tf.name])), ["xy/Min,xy"] )
         # test --sql-names with dupes
         with NamedTempFileDeleteLater() as tf:
             tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nx-y.min,x--y\n,\n,Min")
             tf.close()
-            self._fake_cli(partial(toa5.to_csv.main,[tf.name]))
+            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,[tf.name])), ["x-y.min,x--y/Min"] )
             with self.assertRaises(ValueError):
                 self._fake_cli(partial(toa5.to_csv.main,['-s',tf.name]))
+            # --allow-dupes
+            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-sa',tf.name])), ["x_y_min,x_y_min"] )
 
     def _fake_cli(self, main :Callable[[], None], *,
                   exit_call :Sequence[Any] = (0,), stderr :Optional[str] = '' ) -> list[str]:

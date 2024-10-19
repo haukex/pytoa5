@@ -48,6 +48,7 @@ def _arg_parser():
                         choices=csv.list_dialects(), default='excel')
     parser.add_argument('-n', '--simple-names', help="Simpler column names (no units etc.)", action="store_true")
     parser.add_argument('-s', '--sql-names', help="Transform column names to be suitable for SQL", action="store_true")
+    parser.add_argument('-a', '--allow-dupes', help="Allow duplicate column names", action="store_true")
     parser.add_argument('-e', '--in-encoding', help="Input file encoding (default UTF-8)", default="UTF-8")
     parser.add_argument('-c', '--out-encoding', help="Output encoding (default UTF-8)", default="UTF-8")
     parser.add_argument('-t', '--require-timestamp', help="Require first column to be TIMESTAMP", action="store_true")
@@ -77,11 +78,12 @@ def main(argv :Optional[Sequence[str]] = None):
           open_out(args.out_file, encoding=args.out_encoding, newline='') as ofh):
         csv_rd = csv.reader(ifh, strict=True)
         csv_wr = csv.writer(ofh, dialect=args.out_dialect)
-        env_line, columns = read_header(csv_rd)
+        env_line, columns = read_header(csv_rd, allow_dupes=args.allow_dupes)
         if args.require_timestamp and columns[0] != ColumnHeader(name='TIMESTAMP', unit='TS'):
             raise ValueError("First column was not a timestamp (see --require-timestamp option)")
         col_names = tuple(col_trans(c) for c in columns)
-        set(no_duplicates(col_names, name='column name'))  # e.g. in case of --sql-names
+        if not args.allow_dupes:
+            set(no_duplicates(col_names, name='column name'))  # e.g. in case of --sql-names
         csv_wr.writerow(col_names)
         #TODO Later: That the following pragma is needed on Python 3.12+ appears to be a regression in Coverage.py
         # from 7.6.1 -> 7.6.2; keep an eye on whether that gets fixed
