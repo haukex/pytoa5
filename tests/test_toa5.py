@@ -198,6 +198,15 @@ class Toa5TestCase(unittest.TestCase):
             index=pandas.Index(name='RECORD', data=[5,6]),
             data={ 'BattV_Min[V]': [13.1,12.9] }  ) )
         self.assertEqual( df.attrs['toa5_env_line'], el )
+        # error case: duplicate column names
+        fh = io.StringIO(
+            "TOA5,sn,lm,ls,os,pn,ps,tn\n"
+            "Foo/Min,Foo\n"
+            ",\n"
+            ",Min\n"
+            "1,2\n")
+        with self.assertRaises(ValueError):
+            toa5.read_pandas(fh, low_memory=False)
 
     def test_to_csv_cli(self):
         with Pushd(Path(__file__).parent/'doctest_wd'):

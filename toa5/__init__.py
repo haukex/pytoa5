@@ -303,6 +303,7 @@ def read_pandas(filepath_or_buffer, *, encoding :str = 'UTF-8', encoding_errors 
         cm = nullcontext(filepath_or_buffer)
     with cm as fh:
         env_line, columns = read_header( csv.reader(fh, strict=True) )
+        # Note Pandas doesn't allow dupes in `names`, so we should be ok here:
         args :dict[str, Any] = { 'header':None, 'names':[ col_trans(c) for c in columns ], 'na_values':['NAN'] }
         if columns[0] == ColumnHeader(name='TIMESTAMP', unit='TS'):
             args['parse_dates'] = [0]

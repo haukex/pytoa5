@@ -8,8 +8,8 @@
 TL;DR
 -----
 
-- Code examples with Python's :mod:`csv`: :func:`toa5.read_header`
-- Code examples with :mod:`pandas`: :func:`toa5.read_pandas`
+- Code examples with :mod:`csv`: :func:`toa5.read_header`
+- Code example with :mod:`pandas`: :func:`toa5.read_pandas`
 - `Command-Line TOA5-to-CSV Tool`_
 
 Documentation
