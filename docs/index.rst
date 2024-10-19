@@ -2,9 +2,19 @@
 .. include:: ../README.rst
    :end-before: **The documentation is available at** https://haukex.github.io/pytoa5/
 
-* Documentation :ref:`genindex`
-* `Source code on GitHub <https://github.com/haukex/pytoa5>`_
-* `Author, Copyright, and License`_
+[ `Source code on GitHub <https://github.com/haukex/pytoa5>`_
+| `Author, Copyright, and License`_ ]
+
+TL;DR
+-----
+
+- Code examples with Python's :mod:`csv`: :func:`toa5.read_header`
+- Code examples with `Pandas <https://pandas.pydata.org/>`_: :func:`toa5.read_pandas`
+- `Command-Line TOA5-to-CSV Tool`_
+
+Documentation
+-------------
+[ :ref:`genindex` ]
 
 .. automodule:: toa5
 
