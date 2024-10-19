@@ -87,11 +87,15 @@ class ColumnHeader(NamedTuple):
     This class represents a column header as it would be read from a text (CSV) file, therefore,
     when optional fields are empty, this is represented by empty strings, not by ``None``.
     """
-    #: Column name
+    #: Column name.
+    #:
+    #: .. important::
+    #:     The default function used to transform headers into strings, :func:`default_col_hdr_transform`,
+    #:     assumes that column names don't contain slashes or square brackets.
     name :str
     #: Scientific/engineering units (optional)
     unit :str = ""
-    #: Data process (optional; examples:  ``"Smp"``, ``"Avg"``, ``"Max"``, etc.)
+    #: "Data process" (optional; examples:  ``"Smp"``, ``"Avg"``, ``"Max"``, etc.)
     prc :str = ""
 
 #: A type for a function that takes a :class:`ColumnHeader` and turns it into a single string. See :func:`default_col_hdr_transform`.
@@ -133,7 +137,9 @@ def sql_col_hdr_transform(col :ColumnHeader) -> str:
     - units are omitted (these could be stored in an SQL column comment, for example)
 
     .. warning::
-        This transformation does not make guarantees that all resulting column names of a table will have unique names.
+        This transformation can potentially result in two columns on the same table
+        having the same name, for example, this would be the case with
+        ``ColumnHeader("Test_1","Volts","")`` and ``ColumnHeader("Test(1)","","Smp")``.
 
     :param col: The :class:`ColumnHeader` to process.
     """
@@ -148,8 +154,11 @@ def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[s
     - use square brackets around the units and shorten some of them, and
     - ignore the "TS" and "RN" "units" on the "TIMESTAMP" and "RECORD" columns, respectively.
 
-    Since the column's name is included unchanged, and :func:`read_header` checks for duplicate
-    column names by default, the resulting column names should still be unique.
+    .. warning::
+        Although unlikely in practice (because column names usually only consist of letters, numbers,
+        and underscores, plus indices in parentheses), in theory, this transformation can result in
+        two columns on the same table having the same header. For example, this would be the case
+        with ``ColumnHeader("Test","","Min")`` and ``ColumnHeader("Test/Min","","Smp")``.
 
     :param col: The :class:`ColumnHeader` to process.
     :param short_units: A lookup table in which the keys are the original unit names as

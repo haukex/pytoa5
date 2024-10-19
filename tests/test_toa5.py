@@ -121,6 +121,11 @@ class Toa5TestCase(unittest.TestCase):
                 self.assertEqual(toa5.default_col_hdr_transform(ch), cn)
                 self.assertEqual(toa5.sql_col_hdr_transform(ch), sq)
         self.assertEqual(toa5.sql_col_hdr_transform(toa5.ColumnHeader('__Fö-x__Avg(1,2)','xyz','Avg')), 'f_x_avg_1_2')
+        # test some claims from the documentation
+        self.assertEqual(toa5.default_col_hdr_transform(toa5.ColumnHeader("Test","","Min")),
+                         toa5.default_col_hdr_transform(toa5.ColumnHeader("Test/Min","","Smp")) )
+        self.assertEqual(toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test_1","Volts","")),
+                         toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test(1)","","Smp")))
 
     def test_pandas(self):
         el = toa5.EnvironmentLine(station_name='sn', logger_model='lm', logger_serial='ls', logger_os='os',
@@ -215,11 +220,19 @@ class Toa5TestCase(unittest.TestCase):
                 '  "table_name": "Example"',
                 '}'
             ] )
-            # test errors
-            self._fake_cli(partial(toa5.to_csv.main,['-eLatin1']), stderr=None,
-                exit_call=(2, 'toa5.to_csv: error: Can only use --in-encoding when specifying an input file\n'))
-            self._fake_cli(partial(toa5.to_csv.main,['-cLatin1']), stderr=None,
-                exit_call=(2, 'toa5.to_csv: error: Can only use --out-encoding when specifying an output file\n'))
+            # --sql-names
+            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-ts','Example.dat'])), [
+                'timestamp,record,battv_min',
+                '2021-06-19 00:00:00,0,12.99',
+                '2021-06-20 00:00:00,1,12.96',
+            ] )
+        # test errors
+        self._fake_cli(partial(toa5.to_csv.main,['-eLatin1']), stderr=None,
+            exit_call=(2, 'toa5.to_csv: error: Can only use --in-encoding when specifying an input file\n'))
+        self._fake_cli(partial(toa5.to_csv.main,['-cLatin1']), stderr=None,
+            exit_call=(2, 'toa5.to_csv: error: Can only use --out-encoding when specifying an output file\n'))
+        self._fake_cli(partial(toa5.to_csv.main,['-ns']), stderr=None,
+            exit_call=(2, "toa5.to_csv: error: Can't use --sql-names and --simple-names together\n"))
         # just for coverage: a test with no data
         with NamedTempFileDeleteLater() as tf:
             tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nRECORD,BattV_Min\nRN,Volts\n,Min")
@@ -237,7 +250,21 @@ class Toa5TestCase(unittest.TestCase):
             tf.close()
             with self.assertRaises(ValueError):
                 self._fake_cli(partial(toa5.to_csv.main,[tf.name]))
-            #TODO: test that it works with -j
+            self._fake_cli(partial(toa5.to_csv.main,['-j',tf.name]))
+        # test with dupe column names
+        with NamedTempFileDeleteLater() as tf:
+            tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nxy/Min,xy\n,\nSmp,Min")
+            tf.close()
+            with self.assertRaises(ValueError):
+                self._fake_cli(partial(toa5.to_csv.main,[tf.name]))
+            self._fake_cli(partial(toa5.to_csv.main,['-n',tf.name]))
+        # test --sql-names with dupes
+        with NamedTempFileDeleteLater() as tf:
+            tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nx-y.min,x--y\n,\n,Min")
+            tf.close()
+            self._fake_cli(partial(toa5.to_csv.main,[tf.name]))
+            with self.assertRaises(ValueError):
+                self._fake_cli(partial(toa5.to_csv.main,['-s',tf.name]))
 
     def _fake_cli(self, main :Callable[[], None], *,
                   exit_call :Sequence[Any] = (0,), stderr :Optional[str] = '' ) -> list[str]:

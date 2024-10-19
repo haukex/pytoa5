@@ -21,6 +21,8 @@ v0.9.1 - 2024-10-19
 - Actually allow overriding :func:`toa5.read_pandas` arguments (didn't work as documented)
 - Made :func:`toa5.read_pandas` arguments more flexible: accept filename as well,
   and allow overriding all arguments.
+- Added ``--sql-names`` to CLI
+- A few documentation updates.
 
 v0.9.0 - 2024-10-18
 ^^^^^^^^^^^^^^^^^^^
