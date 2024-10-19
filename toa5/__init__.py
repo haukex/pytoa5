@@ -26,6 +26,7 @@ TOA5 files are essentially CSV files that have four header rows:
 .. autofunction:: short_name
 
 .. autodata:: SHORTER_UNITS
+    :no-value:
 
 .. autofunction:: sql_col_hdr_transform
 
@@ -125,8 +126,12 @@ def sql_col_hdr_transform(col :ColumnHeader) -> str:
 
     - appends :attr:`ColumnHeader.prc` (unless the name already ends with it)
     - any characters that are not ASCII letters or numbers are converted to underscores
+      (and consecutive underscores are reduced to a single one)
     - the returned name is all-lowercase
     - units are omitted (these could be stored in an SQL column comment, for example)
+
+    .. warning::
+        This transformation does not make guarantees that all resulting column names of a table will have unique names.
 
     :param col: The :class:`ColumnHeader` to process.
     """
@@ -140,6 +145,9 @@ def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[s
     - append :attr:`ColumnHeader.prc` with a slash (unless the name already ends with it or it is "Smp"),
     - use square brackets around the units and shorten some of them, and
     - ignore the "TS" and "RN" "units" on the "TIMESTAMP" and "RECORD" columns, respectively.
+
+    Since the column's name is included unchanged, and :func:`read_header` checks for duplicate
+    column names by default, the resulting column names should still be unique.
 
     :param col: The :class:`ColumnHeader` to process.
     :param short_units: A lookup table in which the keys are the original unit names as
@@ -225,7 +233,8 @@ def write_header(env_line :EnvironmentLine, columns :Sequence[ColumnHeader]) -> 
     yield tuple( c.prc for c in columns )
 
 def read_pandas(fh, *, col_trans :ColumnHeaderTransformer = default_col_hdr_transform, **kwargs):
-    """A helper function to read TOA5 files into a Pandas DataFrame with ``pandas.read_csv``.
+    """A helper function to read TOA5 files into a Pandas DataFrame with
+    `pandas.read_csv <https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html>`_.
 
     >>> import toa5
     >>> with open('Example.dat', encoding='ASCII', newline='') as fh:
