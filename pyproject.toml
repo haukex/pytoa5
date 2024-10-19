@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "PyTOA5"
 description = "Utilities for TOA5 Files"
-version = "0.9.0"
+version = "0.9.1"
 authors = [ { name="Hauke D", email="haukex@zero-g.net" } ]
 readme = "README.rst"
 requires-python = ">=3.9"

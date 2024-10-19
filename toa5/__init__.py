@@ -52,10 +52,12 @@ details.
 You should have received a copy of the GNU Lesser General Public License
 along with this program. If not, see https://www.gnu.org/licenses/
 """
+import os
 import re
 import csv
 import importlib
-from typing import NamedTuple, Optional
+from contextlib import nullcontext
+from typing import NamedTuple, Optional, Any
 from collections.abc import Iterator, Sequence, Generator, Callable
 from igbpyutils.iter import no_duplicates, zip_strict
 
@@ -173,8 +175,7 @@ def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = Fals
     A common use case to read a TOA5 file would be the following; as you can see, the main difference
     between reading a regular CSV file and a TOA5 file is the additional call to this function.
 
-    >>> import csv
-    >>> import toa5
+    >>> import csv, toa5
     >>> with open('Example.dat', encoding='ASCII', newline='') as fh:
     ...     csv_rd = csv.reader(fh, strict=True)
     ...     env_line, columns = toa5.read_header(csv_rd)
@@ -184,6 +185,17 @@ def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = Fals
     ['TIMESTAMP', 'RECORD', 'BattV_Min[V]']
     ['2021-06-19 00:00:00', '0', '12.99']
     ['2021-06-20 00:00:00', '1', '12.96']
+
+    This also works with :class:`csv.DictReader`:
+
+    >>> import csv, toa5
+    >>> with open('Example.dat', encoding='ASCII', newline='') as fh:
+    ...     env_line, columns = toa5.read_header(csv.reader(fh, strict=True))
+    ...     for row in csv.DictReader(fh, strict=True,
+    ...             fieldnames=[toa5.short_name(col) for col in columns]):
+    ...         print(row)
+    {'TIMESTAMP': '2021-06-19 00:00:00', 'RECORD': '0', 'BattV_Min[V]': '12.99'}
+    {'TIMESTAMP': '2021-06-20 00:00:00', 'RECORD': '1', 'BattV_Min[V]': '12.96'}
 
     :param csv_reader: The :func:`csv.reader` object to read the header rows from. Only the header is read from the file,
         so after you call this function, you can use the reader to read the data rows from the input file.
@@ -232,44 +244,50 @@ def write_header(env_line :EnvironmentLine, columns :Sequence[ColumnHeader]) -> 
     yield tuple( c.unit for c in columns )
     yield tuple( c.prc for c in columns )
 
-def read_pandas(fh, *, col_trans :ColumnHeaderTransformer = default_col_hdr_transform, **kwargs):
+def read_pandas(filepath_or_buffer, *, encoding :str = 'UTF-8', encoding_errors :str = 'strict',
+                col_trans :ColumnHeaderTransformer = default_col_hdr_transform, **kwargs):
     """A helper function to read TOA5 files into a Pandas DataFrame with
     `pandas.read_csv <https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html>`_.
 
-    >>> import toa5
-    >>> with open('Example.dat', encoding='ASCII', newline='') as fh:
-    ...     df = toa5.read_pandas(fh, low_memory=False)
+    >>> import toa5, pandas
+    >>> df = toa5.read_pandas('Example.dat', low_memory=False)
     >>> print(df)  # doctest: +NORMALIZE_WHITESPACE
                 RECORD  BattV_Min[V]
     TIMESTAMP                       \n\
     2021-06-19       0         12.99
     2021-06-20       1         12.96
     >>> print(df.attrs['toa5_env_line'])  # doctest: +NORMALIZE_WHITESPACE
-    EnvironmentLine(station_name='TestLogger', logger_model='CR1000X', logger_serial='12342',
-    logger_os='CR1000X.Std.03.02', program_name='CPU:TestLogger.CR1X', program_sig='2438', table_name='Example')
+    EnvironmentLine(station_name='TestLogger', logger_model='CR1000X',
+        logger_serial='12342', logger_os='CR1000X.Std.03.02',
+        program_name='CPU:TestLogger.CR1X', program_sig='2438',
+        table_name='Example')
 
-    :param fh: The file object from which to read the TOA5 data. Should be opened with
-        the correct encoding and the ``newlines`` argument set to the empty string ``""``.
+    :param filepath_or_buffer: A filename or file object from which to read the TOA5 data.
+        *Unlike* ``pandas.read_csv``, URLs are not accepted, only such filenames that Python's :func:`open` accepts.
     :param col_trans: The :class:`ColumnHeaderTransformer` to use to convert the :class:`ColumnHeader` objects
         into column names. Defaults to :func:`default_col_hdr_transform`
-    :param kwargs: Additional keyword arguments are passed through to ``pandas.read_csv``.
-        Not allowed are ``filepath_or_buffer``, ``header``, and ``names``.
+    :param kwargs: Any additional keyword arguments are passed through to ``pandas.read_csv``.
+        It is **not recommended** to set ``header`` and ``names``, since they are controlled by this function.
         Other options that this function provides by default, such as ``na_values`` or ``index_col``, may be overridden.
     :return: A Pandas DataFrame.
         The :class:`EnvironmentLine` is stored in the DataFrame's ``attrs`` under the key ``toa5_env_line``.
         Note that, at the time of writing, Pandas documents ``attrs`` as being experimental.
     """
-    if any( k in kwargs for k in ('filepath_or_buffer','header','names') ):
-        raise KeyError("Arguments 'filepath_or_buffer', 'header', and 'names' may not be used")
     pd = importlib.import_module('pandas')
-    env_line, columns = read_header( csv.reader(fh, strict=True) )
-    cols = [ col_trans(c) for c in columns ]
-    xa = {}
-    if columns[0] == ColumnHeader(name='TIMESTAMP', unit='TS'):
-        xa['parse_dates'] = [0]
-        xa['index_col'] = [0]
-    elif columns[0] == ColumnHeader(name='RECORD', unit='RN'):
-        xa['index_col'] = [0]
-    df = pd.read_csv(fh, header=None, names=cols, na_values=['NAN'], **xa, **kwargs)
-    df.attrs['toa5_env_line'] = env_line
+    cm :Any
+    if isinstance(filepath_or_buffer, (str, os.PathLike)):
+        cm = open(filepath_or_buffer, encoding=encoding, errors=encoding_errors, newline='')
+    else:
+        cm = nullcontext(filepath_or_buffer)
+    with cm as fh:
+        env_line, columns = read_header( csv.reader(fh, strict=True) )
+        args :dict[str, Any] = { 'header':None, 'names':[ col_trans(c) for c in columns ], 'na_values':['NAN'] }
+        if columns[0] == ColumnHeader(name='TIMESTAMP', unit='TS'):
+            args['parse_dates'] = [0]
+            args['index_col'] = [0]
+        elif columns[0] == ColumnHeader(name='RECORD', unit='RN'):
+            args['index_col'] = [0]
+        args.update(kwargs)
+        df = pd.read_csv(filepath_or_buffer=fh, encoding=encoding, encoding_errors=encoding_errors, **args)
+        df.attrs['toa5_env_line'] = env_line
     return df

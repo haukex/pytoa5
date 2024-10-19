@@ -46,6 +46,7 @@ def _arg_parser():
     parser.add_argument('-d', '--out-dialect', help="Output CSV dialect (see Python `csv` documentation)",
                         choices=csv.list_dialects(), default='excel')
     parser.add_argument('-n', '--simple-names', help="Don't add units etc. to column names", action="store_true")
+    #TODO: SQL names
     parser.add_argument('-e', '--in-encoding', help="Input file encoding (default UTF-8)", default="UTF-8")
     parser.add_argument('-c', '--out-encoding', help="Output encoding (default UTF-8)", default="UTF-8")
     parser.add_argument('-t', '--require-timestamp', help="Require first column to be TIMESTAMP", action="store_true")
