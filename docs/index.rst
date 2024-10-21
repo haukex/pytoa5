@@ -25,6 +25,18 @@ Documentation
 Changelog
 ---------
 
+v0.9.2 - 2024-10-21
+^^^^^^^^^^^^^^^^^^^
+
+- Added :meth:`toa5.ColumnHeader.simple_checks`
+- **Potentially incompatible changes:**
+- Added ``strict`` to :func:`toa5.default_col_hdr_transform` and enabled it by
+  default, so the characters ``/[]`` are now not allowed in column names
+- :func:`toa5.default_col_hdr_transform` now strips whitespace
+- :func:`toa5.default_col_hdr_transform` and :func:`toa5.sql_col_hdr_transform`
+  now no longer drop "Smp" from :attr:`toa5.ColumnHeader.prc`
+- Therefore, temporarily marked this project as "Beta"
+
 v0.9.1 - 2024-10-19
 ^^^^^^^^^^^^^^^^^^^
 

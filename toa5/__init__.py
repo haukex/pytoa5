@@ -57,6 +57,7 @@ along with this program. If not, see https://www.gnu.org/licenses/
 import os
 import re
 import csv
+import warnings
 import importlib
 from contextlib import nullcontext
 from typing import NamedTuple, Optional, Any
@@ -65,6 +66,9 @@ from igbpyutils.iter import no_duplicates, zip_strict
 
 class Toa5Error(RuntimeError):
     """An error class for :func:`read_header`."""
+
+class Toa5Warning(UserWarning):
+    """A generic warning class for warnings from this module."""
 
 class EnvironmentLine(NamedTuple):
     """Named tuple representing a TOA5 "Environment Line", giving details about the data logger and its program."""
@@ -83,6 +87,16 @@ class EnvironmentLine(NamedTuple):
     #: The name of the table contained in this TOA5 file
     table_name :str
 
+_col_name_re = re.compile(r'\A[A-Za-z_$][A-Za-z0-9_$]*(?:\([0-9]+(?:,[0-9]+)*\))?\Z')
+_col_unit_re = re.compile(r'\A['
+    + bytes(range(0x20, 0x7F)).decode('ASCII')
+    .replace("\\",'').replace('-',r'\-').replace(']',r'\]')
+    .replace(bytes(range(ord('A'),ord('Z')+1)).decode('ASCII'), 'A-Z')
+    .replace(bytes(range(ord('a'),ord('z')+1)).decode('ASCII'), 'a-z')
+    .replace(bytes(range(ord('0'),ord('9')+1)).decode('ASCII'), '0-9')
+    + r'°]{0,64}\Z')
+_col_prc_re = re.compile(r'\A[A-Za-z0-9_-]{0,32}\Z')
+
 class ColumnHeader(NamedTuple):
     """Named tuple representing a column header.
 
@@ -90,15 +104,48 @@ class ColumnHeader(NamedTuple):
     when optional fields are empty, this is represented by empty strings, not by ``None``.
     """
     #: Column name.
-    #:
-    #: .. important::
-    #:     The default function used to transform headers into strings, :func:`default_col_hdr_transform`,
-    #:     assumes that column names don't contain slashes or square brackets.
     name :str
     #: Scientific/engineering units (optional)
     unit :str = ""
     #: "Data process" (optional; examples:  ``"Smp"``, ``"Avg"``, ``"Max"``, etc.)
     prc :str = ""
+
+    def simple_checks(self, *, strict :bool = True) -> str:
+        """Validates the values in this object against some rules mostly derived from experience:
+
+        - :attr:`name` must start with letters, an underscore, or dollar sign,
+          and otherwise only consist of letters, numbers, underscores, and dollar sign,
+          optionally followed by indices (integers separated by commas) in parentheses.
+          May not be longer than 255 characters in total.
+        - :attr:`unit` is fairly lenient and currently allows most printable ASCII
+          characters except backslash. May not be longer than 64 characters in total.
+        - :attr:`prc` is fairly strict and currently allows only up to 32 letters, numbers,
+          underscores, and dashes.
+
+        .. important::
+            Since these rules are derived from experience, they may be adapted in the future,
+            and they may not accurately reflect the rules your data logger imposes on the values.
+            This should normally not be a problem, because within this library, this function
+            is currently only used to generate warnings in :func:`default_col_hdr_transform`,
+            and you are free to disable its ``strict`` option.
+
+            Please feel free to `suggest changes <https://github.com/haukex/pytoa5/issues>`_.
+
+        :param strict: Whether or not to raise an error for invalid values.
+        :return: Returns the empty string if there are no problems. When ``strict`` is off
+            and problems are detected, returns a string describing the problems.
+        :raises ValueError: When ``strict`` is on and any unusual values are detected.
+        """
+        problems :list[str] = []
+        if len(self.name)>255 or not _col_name_re.fullmatch(self.name):
+            problems.append(f"column name {self.name!r}")
+        if not _col_unit_re.fullmatch(self.unit):
+            problems.append(f"unit {self.unit!r}")
+        if not _col_prc_re.fullmatch(self.prc):
+            problems.append(f"data process {self.prc}")
+        if strict and problems:
+            raise ValueError(f"Unexpected {', '.join(problems)}")
+        return f"Unusual {', '.join(problems)}" if problems else ''
 
 #: A type for a function that takes a :class:`ColumnHeader` and turns it into a single string. See :func:`default_col_hdr_transform`.
 ColumnHeaderTransformer = Callable[[ColumnHeader], str]
@@ -122,10 +169,10 @@ SHORTER_UNITS :dict[str, str] = {
 }
 
 def _maybe_prc(col :ColumnHeader, sep :str) -> str:
-    """Append the :attr:`~ColumnHeader.prc` if it's not "Smp" and it's not already present at the end of the :attr:`~ColumnHeader.name`."""
-    if col.prc and col.prc.lower()!='smp' and not re.search(re.escape(col.prc)+r'(?:\([^)]*\))?\Z', col.name, re.I):
-        return col.name + sep + col.prc
-    return col.name
+    """Append the :attr:`~ColumnHeader.prc` if it's not already present at the end of the :attr:`~ColumnHeader.name`."""
+    if col.prc and not re.search(re.escape(col.prc)+r'(?:\([^)]*\))?\Z', col.name, re.I):
+        return col.name.strip() + sep + col.prc.strip()
+    return col.name.strip()
 
 _sql_trans_re = re.compile(r'[^A-Za-z_0-9]+')
 _sql_under_re = re.compile(r'_{2,}')
@@ -141,8 +188,8 @@ def sql_col_hdr_transform(col :ColumnHeader) -> str:
     .. warning::
         This transformation can potentially result in two columns on the same table
         having the same name, for example, this would be the case with
-        ``ColumnHeader("Test_1","Volts","")`` and ``ColumnHeader("Test(1)","","Smp")``,
-        which would both result in ``"test_1"``.
+        ``ColumnHeader("Test_1","Volts","Smp")`` and ``ColumnHeader("Test(1)","","Smp")``,
+        which would both result in ``"test_1_smp"``.
 
         Therefore, it is **strongly recommended** that you check for duplicate
         column names after using this transformer. For example, see
@@ -152,34 +199,35 @@ def sql_col_hdr_transform(col :ColumnHeader) -> str:
     """
     return _sql_under_re.sub('_', _sql_trans_re.sub('_', _maybe_prc(col, '_'))).strip('_').lower()
 
-def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[str,str]] = None):
+def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[str,str]] = None, strict :bool = True) -> str:
     """The default function used to transform a :class:`ColumnHeader` into a single string.
 
     This conversion is slightly opinionated and will:
 
-    - append :attr:`ColumnHeader.prc` with a slash (unless the name already ends with it or it is "Smp"),
-    - use square brackets around the units and shorten some of them, and
-    - ignore the "TS" and "RN" "units" on the "TIMESTAMP" and "RECORD" columns, respectively.
-
-    .. warning::
-        Although unlikely in practice (because column names usually only consist of letters, numbers,
-        and underscores, plus indices in parentheses), in theory, this transformation can result in
-        two columns on the same table having the same header. For example, this would be the case
-        with ``ColumnHeader("Test","","Min")`` and ``ColumnHeader("Test/Min","","Smp")``, which would
-        both result in ``"Test/Min"``.
+    - strip all whitespace from :class:`ColumnHeader` values,
+    - append :attr:`ColumnHeader.prc` to the name with a slash (unless the name already ends with it),
+    - append the units in square brackets shorten some units, and
+    - ignore the "TS" and "RN" units on the "TIMESTAMP" and "RECORD" columns, respectively.
 
     :param col: The :class:`ColumnHeader` to process.
     :param short_units: A lookup table in which the keys are the original unit names as
         they appear in the TOA5 file, and the values are a shorter version of that unit.
         If not provided, defaults to :data:`SHORTER_UNITS`.
+    :param strict: When this is enabled (the default), raise a :exc:`ValueError` if the
+        column name contains the characters ``/[]``, which might cause duplicate column
+        names in a table, and warn if :meth:`ColumnHeader.simple_checks` fails.
     """
     if short_units is None:  # pragma: no branch
         short_units = SHORTER_UNITS
+    if strict and any( x in col.name for x in '/[]' ):
+        raise ValueError(f"Column name {col.name!r} may not contain any of '/[]'")
+    if strict and (w := col.simple_checks(strict=False)):
+        warnings.warn(w, Toa5Warning)
     c = _maybe_prc(col, '/')
     if col.unit and \
             not ( col.name=='TIMESTAMP' and col.unit=='TS' or col.name=='RECORD' and col.unit=='RN' ) \
             and len(short_units.get(col.unit, col.unit)):
-        c += "[" + short_units.get(col.unit, col.unit) + "]"
+        c += "[" + short_units.get(col.unit, col.unit).strip() + "]"
     return c
 
 #: A short alias for :func:`default_col_hdr_transform`.
@@ -213,6 +261,9 @@ def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = Fals
     ...         print(row)
     {'TIMESTAMP': '2021-06-19 00:00:00', 'RECORD': '0', 'BattV_Min[V]': '12.99'}
     {'TIMESTAMP': '2021-06-20 00:00:00', 'RECORD': '1', 'BattV_Min[V]': '12.96'}
+
+    :seealso: :func:`short_name`, used in the examples above, is an alias for
+        :func:`default_col_hdr_transform`.
 
     :param csv_reader: The :func:`csv.reader` object to read the header rows from. Only the header is read from the file,
         so after you call this function, you can use the reader to read the data rows from the input file.
@@ -264,7 +315,7 @@ def write_header(env_line :EnvironmentLine, columns :Sequence[ColumnHeader]) -> 
 def read_pandas(filepath_or_buffer, *, encoding :str = 'UTF-8', encoding_errors :str = 'strict',
                 col_trans :ColumnHeaderTransformer = default_col_hdr_transform, **kwargs):
     """A helper function to read TOA5 files into a :class:`pandas.DataFrame`.
-    Uses :func:`pandas.read_csv` internally.
+    Uses :func:`read_header` and :func:`pandas.read_csv` internally.
 
     >>> import toa5, pandas
     >>> df = toa5.read_pandas('Example.dat', low_memory=False)

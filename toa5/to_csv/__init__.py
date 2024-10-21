@@ -41,16 +41,17 @@ from igbpyutils.error import init_handlers
 from .. import read_header, ColumnHeader, ColumnHeaderTransformer, default_col_hdr_transform, sql_col_hdr_transform
 
 def _arg_parser():
-    parser = argparse.ArgumentParser('toa5.to_csv', description='TOA5 to CSV Converter')
+    parser = argparse.ArgumentParser('toa5.to_csv', description='TOA5 to CSV Converter',
+        epilog='Details can be found at https://haukex.github.io/pytoa5/')
     parser.add_argument('-o', '--out-file', help='Output filename ("-"=STDOUT)')
     parser.add_argument('-l', '--env-line', metavar='ENV_LINE_FILE', help='JSON file for environment line ("-"=STDOUT)')
     parser.add_argument('-d', '--out-dialect', help="Output CSV dialect (see Python `csv` module)",
                         choices=csv.list_dialects(), default='excel')
     parser.add_argument('-n', '--simple-names', help="Simpler column names (no units etc.)", action="store_true")
     parser.add_argument('-s', '--sql-names', help="Transform column names to be suitable for SQL", action="store_true")
-    parser.add_argument('-a', '--allow-dupes', help="Allow duplicate column names", action="store_true")
+    parser.add_argument('-a', '--allow-dupes', help="Allow duplicate column names (in input and output)", action="store_true")
     parser.add_argument('-e', '--in-encoding', help="Input file encoding (default UTF-8)", default="UTF-8")
-    parser.add_argument('-c', '--out-encoding', help="Output encoding (default UTF-8)", default="UTF-8")
+    parser.add_argument('-c', '--out-encoding', help="Output file encoding (default UTF-8)", default="UTF-8")
     parser.add_argument('-t', '--require-timestamp', help="Require first column to be TIMESTAMP", action="store_true")
     parser.add_argument('-j', '--allow-jagged', help="Allow rows to have differing column counts", action="store_true")
     parser.add_argument('toa5file', metavar='TOA5FILE', help='The TOA5 file to process ("-"=STDIN)', nargs='?')

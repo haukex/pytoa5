@@ -48,7 +48,7 @@ _exp_hdr :dict[str, tuple[tuple[toa5.ColumnHeader, str, str],...]] = {
         ( toa5.ColumnHeader(name="RECORD", unit="RN"), "RECORD", "record" ),
         ( toa5.ColumnHeader(name="BattV_Min", unit="Volts", prc="Min"), "BattV_Min[V]", "battv_min" ),
         ( toa5.ColumnHeader(name="BattV_TMn", prc="TMn"), "BattV_TMn", "battv_tmn" ),
-        ( toa5.ColumnHeader(name="PTemp", unit="oC", prc="Smp"), "PTemp[°C]", "ptemp" ),
+        ( toa5.ColumnHeader(name="PTemp", unit="oC", prc="Smp"), "PTemp/Smp[°C]", "ptemp_smp" ),
         ( toa5.ColumnHeader(name="PTemp_C_Min", unit="Deg C", prc="Min"), "PTemp_C_Min[°C]", "ptemp_c_min" ),
         ( toa5.ColumnHeader(name="PTemp_C_TMn", prc="TMn"), "PTemp_C_TMn", "ptemp_c_tmn" ),
         ( toa5.ColumnHeader(name="PTemp_C_Max", unit="Deg C", prc="Max"), "PTemp_C_Max[°C]", "ptemp_c_max" ),
@@ -60,8 +60,8 @@ _exp_hdr :dict[str, tuple[tuple[toa5.ColumnHeader, str, str],...]] = {
         ( toa5.ColumnHeader(name="BattV", unit="Volts", prc="Avg"), "BattV/Avg[V]", "battv_avg" ),
         ( toa5.ColumnHeader(name="PTemp_C_Min", unit="Deg C", prc="Min"), "PTemp_C_Min[°C]", "ptemp_c_min" ),
         ( toa5.ColumnHeader(name="PTemp_C_Max", unit="Deg C", prc="Max"), "PTemp_C_Max[°C]", "ptemp_c_max" ),
-        ( toa5.ColumnHeader(name="AirT_C(42)", unit="Deg C", prc="Smp"), "AirT_C(42)[°C]", "airt_c_42" ),
-        ( toa5.ColumnHeader(name="RelHumid_Avg(3)", unit="%", prc="Avg"), "RelHumid_Avg(3)[%]", "relhumid_avg_3" ),
+        ( toa5.ColumnHeader(name="AirT_C(42)", unit="Deg C", prc="Smp"), "AirT_C(42)/Smp[°C]", "airt_c_42_smp" ),
+        ( toa5.ColumnHeader(name="RelHumid_Avg(3)", unit="% ", prc="Avg"), "RelHumid_Avg(3)[%]", "relhumid_avg_3" ),
     ),
 }
 
@@ -97,7 +97,7 @@ class Toa5TestCase(unittest.TestCase):
         self.assertEqual( tuple( toa5.write_header(env_line, columns) ), (
             ("TOA5","TestLogger","CR1000X","12342","CR1000X.Std.03.02","CPU:TestLogger.CR1X","2438","Hourly"),
             ("TIMESTAMP","RECORD","BattV","PTemp_C_Min","PTemp_C_Max","AirT_C(42)","RelHumid_Avg(3)"),
-            ("TS","RN","Volts","Deg C","Deg C","Deg C","%"),
+            ("TS","RN","Volts","Deg C","Deg C","Deg C","% "),
             ("","","Avg","Min","Max","Smp","Avg"),
         ) )
 
@@ -114,20 +114,53 @@ class Toa5TestCase(unittest.TestCase):
             toa5.read_header(iter(dupe_cols))
         toa5.read_header(iter(dupe_cols), allow_dupes=True)
 
+    def test_col_valid(self):
+        good_cols :tuple[toa5.ColumnHeader, ...] = (
+            toa5.ColumnHeader("Hello"," & ","World"),
+            toa5.ColumnHeader("Good_Col(1,2,3)","%$*","FooBar_Quz"),
+            toa5.ColumnHeader("_xyz_","°C","Test-Data-Process"),
+        )
+        bad_cols :tuple[toa5.ColumnHeader, ...] = (
+            toa5.ColumnHeader("","",""),
+            toa5.ColumnHeader("Bad-Col","",""),
+            toa5.ColumnHeader("5Bad","",""),
+            toa5.ColumnHeader(" Foo","",""),
+            toa5.ColumnHeader("Foo ","",""),
+            toa5.ColumnHeader("Foo","ä",""),
+            toa5.ColumnHeader("Foo(x)","",""),
+            toa5.ColumnHeader("Foo()","",""),
+            toa5.ColumnHeader("Foo","\\x",""),
+            toa5.ColumnHeader("Foo","","x*"),
+            toa5.ColumnHeader("Foo","","x "),
+            toa5.ColumnHeader("Foo",""," x"),
+        )
+        for col in good_cols:
+            self.assertEqual( col.simple_checks(strict=True), '' )
+            self.assertEqual( col.simple_checks(strict=False), '' )
+        for col in bad_cols:
+            with self.assertRaises(ValueError):
+                col.simple_checks()
+            self.assertTrue( col.simple_checks(strict=False) )
+
     def test_col_trans(self):
         # check the transformation functions
         for tp in _exp_hdr.values():
             for ch, cn, sq in tp:
                 self.assertEqual(toa5.default_col_hdr_transform(ch), cn)
                 self.assertEqual(toa5.sql_col_hdr_transform(ch), sq)
+        # errors and warnings from default_col_hdr_transform
+        with self.assertRaises(ValueError):
+            toa5.short_name(toa5.ColumnHeader("Foo[x]","",""))
+        with self.assertWarns(toa5.Toa5Warning) as cm:
+            self.assertEqual(toa5.short_name(toa5.ColumnHeader("Foo-Bar","","")), 'Foo-Bar')
+        self.assertEqual(len(cm.warnings), 1)
+        self.assertEqual(str(cm.warnings[0].message), "Unusual column name 'Foo-Bar'")
+        # sql transform
         self.assertEqual(toa5.sql_col_hdr_transform(toa5.ColumnHeader('__Fö-x__Avg(1,2)','xyz','Avg')), 'f_x_avg_1_2')
         # test some claims from the documentation
-        self.assertEqual(toa5.default_col_hdr_transform(toa5.ColumnHeader("Test","","Min")),
-                         toa5.default_col_hdr_transform(toa5.ColumnHeader("Test/Min","","Smp")) )
-        self.assertEqual(toa5.default_col_hdr_transform(toa5.ColumnHeader("Test","","Min")), "Test/Min" )
-        self.assertEqual(toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test_1","Volts","")),
+        self.assertEqual(toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test_1","Volts","Smp")),
                          toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test(1)","","Smp")))
-        self.assertEqual(toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test_1","Volts","")), "test_1" )
+        self.assertEqual(toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test_1","Volts","Smp")), "test_1_smp" )
 
     def test_pandas(self):
         el = toa5.EnvironmentLine(station_name='sn', logger_model='lm', logger_serial='ls', logger_os='os',
@@ -269,22 +302,20 @@ class Toa5TestCase(unittest.TestCase):
             tf.close()
             with self.assertRaises(toa5.Toa5Error):
                 self._fake_cli(partial(toa5.to_csv.main,[tf.name]))
-            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-a',tf.name])), ["Foo,Foo/Min"] )
-        # test with dupe column names after transform
+            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-a',tf.name])), ["Foo/Smp,Foo/Min"] )
+        # test with invalid column names
         with NamedTempFileDeleteLater() as tf:
             tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nxy/Min,xy\n,\nSmp,Min")
             tf.close()
             with self.assertRaises(ValueError):
                 self._fake_cli(partial(toa5.to_csv.main,[tf.name]))
-            # --allow-dupes
-            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-a',tf.name])), ["xy/Min,xy/Min"] )
-            # not a dupe with --simple--names
+            # not an error with --simple-names
             self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-n',tf.name])), ["xy/Min,xy"] )
         # test --sql-names with dupes
         with NamedTempFileDeleteLater() as tf:
-            tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nx-y.min,x--y\n,\n,Min")
+            tf.write(b"TOA5,sn,lm,ls,os,pn,ps,tn\nx_y_min,x__y\n,\n,Min")
             tf.close()
-            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,[tf.name])), ["x-y.min,x--y/Min"] )
+            self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,[tf.name])), ["x_y_min,x__y/Min"] )
             with self.assertRaises(ValueError):
                 self._fake_cli(partial(toa5.to_csv.main,['-s',tf.name]))
             # --allow-dupes
