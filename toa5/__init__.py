@@ -12,6 +12,10 @@ The following two functions can be used to read files with this header:
 
 .. autofunction:: read_pandas
 
+.. autoclass:: FileHeader
+    :members:
+    :undoc-members:
+
 .. autoclass:: EnvironmentLine
     :members:
     :undoc-members:
@@ -147,6 +151,12 @@ class ColumnHeader(NamedTuple):
             raise ValueError(f"Unexpected {', '.join(problems)}")
         return f"Unusual {', '.join(problems)}" if problems else ''
 
+class FileHeader(NamedTuple):
+    """Named tuple representing the TOA5 header,
+    consisting of an :class:`EnvironmentLine` object and a tuple of :class:`ColumnHeader` objects."""
+    env_line :EnvironmentLine
+    columns :tuple[ColumnHeader, ...]
+
 #: A type for a function that takes a :class:`ColumnHeader` and turns it into a single string. See :func:`default_col_hdr_transform`.
 ColumnHeaderTransformer = Callable[[ColumnHeader], str]
 
@@ -234,7 +244,7 @@ def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[s
 short_name = default_col_hdr_transform
 
 _env_line_keys = ('toa5',) + EnvironmentLine._fields
-def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = False) -> tuple[EnvironmentLine, tuple[ColumnHeader, ...]]:
+def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = False) -> FileHeader:
     """Read the header of a TOA5 file.
 
     A common use case to read a TOA5 file would be the following; as you can see, the main difference
@@ -268,7 +278,7 @@ def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = Fals
     :param csv_reader: The :func:`csv.reader` object to read the header rows from. Only the header is read from the file,
         so after you call this function, you can use the reader to read the data rows from the input file.
     :param allow_dupes: Whether or not to allow duplicates in the :attr:`ColumnHeader.name` values.
-    :return: Returns an :class:`EnvironmentLine` object and a tuple of :class:`ColumnHeader` objects.
+    :return: Returns a :class:`FileHeader` tuple.
     :raises Toa5Error: In case any error is encountered while reading the TOA5 header.
     """
     # ### Read the environment line
@@ -302,7 +312,7 @@ def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = Fals
         except ValueError as ex:
             raise Toa5Error(*ex.args)  # pylint: disable=raise-missing-from  # (we're just stealing the error message)
     columns = tuple( ColumnHeader(*c) for c in zip_strict(field_names, units, proc) )
-    return EnvironmentLine(**env_line_dict), columns
+    return FileHeader(EnvironmentLine(**env_line_dict), columns)
 
 def write_header(env_line :EnvironmentLine, columns :Sequence[ColumnHeader]) -> Generator[Sequence[str], None, None]:
     """Convert an :class:`EnvironmentLine` and sequence of :class:`ColumnHeader` objects back

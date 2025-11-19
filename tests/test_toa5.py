@@ -87,14 +87,21 @@ class Toa5TestCase(unittest.TestCase):
             env_line, columns = toa5.read_header(csv_rd)
             self.assertEqual(env_line, _exp_env_daily)
             self.assertEqual(columns, tuple( t[0] for t in _exp_hdr['Daily'] ))
+        # write header
+        self.assertEqual( tuple( toa5.write_header(env_line, columns) ), (
+            ("TOA5","TestLogger","CR1000X","12342","CR1000X.Std.03.02","CPU:TestLogger.CR1X","2438","Daily"),
+            ("TIMESTAMP","RECORD","BattV_Min","BattV_TMn","PTemp","PTemp_C_Min","PTemp_C_TMn","PTemp_C_Max","PTemp_C_TMx"),
+            ("TS","RN","Volts","","oC","Deg C","","Deg C",""),
+            ("","","Min","TMn","Smp","Min","TMn","Max","TMx"),
+        ) )
         # read header, different file
         with (_in_path/'TestLogger_Hourly_1.dat').open(encoding='ASCII', newline='') as fh:
             csv_rd = csv.reader(fh, strict=True)
-            env_line, columns = toa5.read_header(csv_rd)
-            self.assertEqual(env_line, _exp_env_hourly)
-            self.assertEqual(columns, tuple( t[0] for t in _exp_hdr['Hourly'] ))
+            # check against the new FileHeader NamedTuple
+            exp_hdr = toa5.FileHeader(_exp_env_hourly, tuple( t[0] for t in _exp_hdr['Hourly'] ))
+            self.assertEqual(toa5.read_header(csv_rd), exp_hdr)
         # write header
-        self.assertEqual( tuple( toa5.write_header(env_line, columns) ), (
+        self.assertEqual( tuple( toa5.write_header(exp_hdr.env_line, exp_hdr.columns) ), (
             ("TOA5","TestLogger","CR1000X","12342","CR1000X.Std.03.02","CPU:TestLogger.CR1X","2438","Hourly"),
             ("TIMESTAMP","RECORD","BattV","PTemp_C_Min","PTemp_C_Max","AirT_C(42)","RelHumid_Avg(3)"),
             ("TS","RN","Volts","Deg C","Deg C","Deg C","% "),

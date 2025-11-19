@@ -28,7 +28,9 @@ Changelog
 v1.0.0 - 2025-11-19
 ^^^^^^^^^^^^^^^^^^^
 
-- Drop testing in Python 3.9 and add 3.14
+- Stop testing for Python 3.9 and add Python 3.14
+- **Potentially incompatible change:**
+  :func:`toa5.read_header` now returns the named tuple :class:`toa5.FileHeader`
 
 v0.9.2 - 2024-10-21
 ^^^^^^^^^^^^^^^^^^^
