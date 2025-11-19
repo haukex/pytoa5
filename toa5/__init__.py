@@ -64,8 +64,8 @@ import csv
 import warnings
 import importlib
 from contextlib import nullcontext
-from typing import NamedTuple, Optional, Any
-from collections.abc import Iterator, Sequence, Generator, Callable
+from typing import NamedTuple, Optional, Any, Final, Literal
+from collections.abc import Iterable, Sequence, Generator, Callable
 from igbpyutils.iter import no_duplicates, zip_strict
 
 class Toa5Error(RuntimeError):
@@ -258,10 +258,10 @@ def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[s
 short_name = default_col_hdr_transform
 
 #: The number of rows in a TOA5 header.
-HEADER_ROWS = 4
+HEADER_ROWS :Final[Literal[4]] = 4
 
 _env_line_keys = ('toa5',) + EnvironmentLine._fields
-def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = False) -> FileHeader:
+def read_header(csv_reader :Iterable[Sequence[str]], *, allow_dupes :bool = False) -> FileHeader:
     """Read the header of a TOA5 file.
 
     A common use case to read a TOA5 file would be the following; as you can see, the main difference
@@ -301,9 +301,10 @@ def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = Fals
     :return: Returns a :class:`FileHeader` tuple.
     :raises Toa5Error: In case any error is encountered while reading the TOA5 header.
     """
+    csv_iter = iter(csv_reader)
     # ### Read the environment line
     try:
-        env_line = next(csv_reader)
+        env_line = next(csv_iter)
     except StopIteration as ex:
         raise Toa5Error("failed to read environment line") from ex
     except csv.Error as ex:
@@ -316,9 +317,9 @@ def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = Fals
     del env_line_dict['toa5']
     # ### Read the header rows
     try:
-        field_names = next(csv_reader)
-        units = next(csv_reader)
-        proc = next(csv_reader)
+        field_names = next(csv_iter)
+        units = next(csv_iter)
+        proc = next(csv_iter)
     except StopIteration as ex:
         raise Toa5Error("unexpected end of headers") from ex
     except csv.Error as ex:
