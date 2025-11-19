@@ -245,7 +245,7 @@ def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[s
         column name contains the characters ``/[]``, which might cause duplicate column
         names in a table, and warn if :meth:`ColumnHeader.simple_checks` fails.
     """
-    if short_units is None:  # pragma: no branch
+    if short_units is None:
         short_units = SHORTER_UNITS
     if strict and any( x in col.name for x in '/[]' ):
         raise ValueError(f"Column name {col.name!r} may not contain any of '/[]'")

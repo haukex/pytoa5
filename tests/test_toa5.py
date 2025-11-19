@@ -179,6 +179,10 @@ class Toa5TestCase(unittest.TestCase):
         self.assertEqual(toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test_1","Volts","Smp")),
                          toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test(1)","","Smp")))
         self.assertEqual(toa5.sql_col_hdr_transform(toa5.ColumnHeader("Test_1","Volts","Smp")), "test_1_smp" )
+        # check short form transformation
+        self.assertEqual(toa5.default_col_hdr_transform(toa5.ColumnHeader("Test_Smp(1)","Deg C","Smp")), "Test_Smp(1)[°C]" )
+        self.assertEqual(toa5.default_col_hdr_transform(toa5.ColumnHeader("Test_Smp(1)","Deg C","Smp"),
+            short_units={'Deg C':'oC'} ), "Test_Smp(1)[oC]" )
 
     def test_pandas(self):
         el = toa5.EnvironmentLine(station_name='sn', logger_model='lm', logger_serial='ls', logger_os='os',
