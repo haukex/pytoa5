@@ -86,9 +86,7 @@ def main(argv :Optional[Sequence[str]] = None):
         if not args.allow_dupes:
             set(no_duplicates(col_names, name='column name'))  # e.g. in case of --sql-names
         csv_wr.writerow(col_names)
-        #TODO Later: That the following pragma is needed on Python 3.12+ appears to be a regression in Coverage.py
-        # from 7.6.1 -> 7.6.2; keep an eye on whether that gets fixed
-        for ri, row in enumerate(csv_rd, start=5):  # pragma: no branch
+        for ri, row in enumerate(csv_rd, start=5):
             if not args.allow_jagged and len(row)!=len(columns):
                 raise ValueError(f"Row {ri}: expected {len(columns)} columns but got {len(row)} (see --allow-jagged option)")
             csv_wr.writerow(row)
