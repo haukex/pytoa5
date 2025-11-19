@@ -81,6 +81,7 @@ def load_tests(_loader :unittest.TestLoader, tests :unittest.TestSuite, _ignore)
 class Toa5TestCase(unittest.TestCase):
 
     def test_toa5_read_write_header(self):
+        self.assertEqual(toa5.HEADER_ROWS, 4)
         # read header
         with (_in_path/'TestLogger_Daily_1.dat').open(encoding='ASCII', newline='') as fh:
             csv_rd = csv.reader(fh, strict=True)

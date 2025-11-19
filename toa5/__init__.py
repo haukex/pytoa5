@@ -75,7 +75,9 @@ class Toa5Warning(UserWarning):
     """A generic warning class for warnings from this module."""
 
 class EnvironmentLine(NamedTuple):
-    """Named tuple representing a TOA5 "Environment Line", giving details about the data logger and its program."""
+    """Named tuple representing a TOA5 "Environment Line", giving details about the data logger and its program.
+
+    Note this named tuple defines the fields in the same order as they appear in the file."""
     #: Station (data logger) name
     station_name :str
     #: Model number of the data logger
@@ -255,6 +257,9 @@ def default_col_hdr_transform(col :ColumnHeader, *, short_units :Optional[dict[s
 #: A short alias for :func:`default_col_hdr_transform`.
 short_name = default_col_hdr_transform
 
+#: The number of rows in a TOA5 header.
+HEADER_ROWS = 4
+
 _env_line_keys = ('toa5',) + EnvironmentLine._fields
 def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = False) -> FileHeader:
     """Read the header of a TOA5 file.
@@ -283,6 +288,9 @@ def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = Fals
     ...         print(row)
     {'TIMESTAMP': '2021-06-19 00:00:00', 'RECORD': '0', 'BattV_Min[V]': '12.99'}
     {'TIMESTAMP': '2021-06-20 00:00:00', 'RECORD': '1', 'BattV_Min[V]': '12.96'}
+
+    Note that a TOA5 header is four rows long, and this function guarantees to either read exactly four rows from the CSV reader, otherwise
+    it throws a :exc:`Toa5Error`. The constant :const:`HEADER_ROWS` is provided so you can avoid "4" as a magic number in your code.
 
     :seealso: :func:`short_name`, used in the examples above, is an alias for
         :func:`default_col_hdr_transform`.
