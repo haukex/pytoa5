@@ -1,7 +1,7 @@
 PyTOA5: Utilities for TOA5 Files
 ================================
 
-This library contains routines for the processing of data files in the TOA5 format.
+This library contains routines for the processing of data files in the "TOA5" format.
 Since this format is basically a CSV file with a specific header, this library primarily
 provides functions to handle the header; the rest of the file can be read with Python's
 `csv <https://docs.python.org/3/library/csv.html>`_ module. A function to read a TOA5
@@ -12,7 +12,7 @@ file into a `Pandas <https://pandas.pydata.org/>`_ DataFrame is also provided.
 Author, Copyright, and License
 ------------------------------
 
-Copyright (c) 2023-2024 Hauke Dämpfling (haukex@zero-g.net)
+Copyright (c) 2023-2025 Hauke Dämpfling (haukex@zero-g.net)
 at the Leibniz Institute of Freshwater Ecology and Inland Fisheries (IGB),
 Berlin, Germany, https://www.igb-berlin.de/
 

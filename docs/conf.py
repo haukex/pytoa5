@@ -17,7 +17,7 @@ def _get_props() -> tuple[str, str, str]:
 
 project, author, version = _get_props()
 
-copyright = '2023-2024 Hauke Dämpfling at the IGB'  # pylint: disable=redefined-builtin
+copyright = '2023-2025 Hauke Dämpfling at the IGB'  # pylint: disable=redefined-builtin
 
 nitpicky = True
 

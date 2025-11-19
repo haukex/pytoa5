@@ -41,7 +41,7 @@ The following two functions can be used to read files with this header:
 Author, Copyright, and License
 ------------------------------
 
-Copyright (c) 2023-2024 Hauke Dämpfling (haukex@zero-g.net)
+Copyright (c) 2023-2025 Hauke Dämpfling (haukex@zero-g.net)
 at the Leibniz Institute of Freshwater Ecology and Inland Fisheries (IGB),
 Berlin, Germany, https://www.igb-berlin.de/
 
