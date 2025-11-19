@@ -88,7 +88,9 @@ class Toa5TestCase(unittest.TestCase):
             self.assertEqual(env_line, _exp_env_daily)
             self.assertEqual(columns, tuple( t[0] for t in _exp_hdr['Daily'] ))
         # write header
-        self.assertEqual( tuple( toa5.write_header(env_line, columns) ), (
+        with self.assertWarns(DeprecationWarning):
+            wh = tuple( toa5.write_header(env_line, columns) )
+        self.assertEqual( wh, (
             ("TOA5","TestLogger","CR1000X","12342","CR1000X.Std.03.02","CPU:TestLogger.CR1X","2438","Daily"),
             ("TIMESTAMP","RECORD","BattV_Min","BattV_TMn","PTemp","PTemp_C_Min","PTemp_C_TMn","PTemp_C_Max","PTemp_C_TMx"),
             ("TS","RN","Volts","","oC","Deg C","","Deg C",""),
@@ -99,14 +101,15 @@ class Toa5TestCase(unittest.TestCase):
             csv_rd = csv.reader(fh, strict=True)
             # check against the new FileHeader NamedTuple
             exp_hdr = toa5.FileHeader(_exp_env_hourly, tuple( t[0] for t in _exp_hdr['Hourly'] ))
-            self.assertEqual(toa5.read_header(csv_rd), exp_hdr)
+            got_hdr = toa5.read_header(csv_rd)
+            self.assertEqual(got_hdr, exp_hdr)
         # write header
-        self.assertEqual( tuple( toa5.write_header(exp_hdr.env_line, exp_hdr.columns) ), (
-            ("TOA5","TestLogger","CR1000X","12342","CR1000X.Std.03.02","CPU:TestLogger.CR1X","2438","Hourly"),
+        exp_env = ("TOA5","TestLogger","CR1000X","12342","CR1000X.Std.03.02","CPU:TestLogger.CR1X","2438","Hourly")
+        self.assertEqual( got_hdr.env_line.row(), exp_env )
+        self.assertEqual( got_hdr.rows(), ( exp_env,
             ("TIMESTAMP","RECORD","BattV","PTemp_C_Min","PTemp_C_Max","AirT_C(42)","RelHumid_Avg(3)"),
             ("TS","RN","Volts","Deg C","Deg C","Deg C","% "),
-            ("","","Avg","Min","Max","Smp","Avg"),
-        ) )
+            ("","","Avg","Min","Max","Smp","Avg") ) )
 
     def test_bad_toa5(self):
         # various bad TOA5 files

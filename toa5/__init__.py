@@ -91,6 +91,11 @@ class EnvironmentLine(NamedTuple):
     #: The name of the table contained in this TOA5 file
     table_name :str
 
+    def row(self) -> tuple[str,str,str,str,str,str,str,str]:
+        """Convert this environment line back into the first TOA5 header row."""
+        return ('TOA5', self.station_name, self.logger_model, self.logger_serial, self.logger_os,
+                self.program_name, self.program_sig, self.table_name)
+
 _col_name_re = re.compile(r'\A[A-Za-z_$][A-Za-z0-9_$]*(?:\([0-9]+(?:,[0-9]+)*\))?\Z')
 _col_unit_re = re.compile(r'\A['
     + bytes(range(0x20, 0x7F)).decode('ASCII')
@@ -152,10 +157,17 @@ class ColumnHeader(NamedTuple):
         return f"Unusual {', '.join(problems)}" if problems else ''
 
 class FileHeader(NamedTuple):
-    """Named tuple representing the TOA5 header,
-    consisting of an :class:`EnvironmentLine` object and a tuple of :class:`ColumnHeader` objects."""
+    """Named tuple representing the TOA5 header, consisting of an :class:`EnvironmentLine` and a tuple of :class:`ColumnHeader`s."""
     env_line :EnvironmentLine
     columns :tuple[ColumnHeader, ...]
+
+    def rows(self) -> tuple[tuple[str,str,str,str,str,str,str,str],tuple[str,...],tuple[str,...],tuple[str,...]]:
+        """Convert this object's :class:`EnvironmentLine` and :class:`ColumnHeader` objects back into
+        the four TOA5 header rows, suitable for use in e.g. :meth:`~csv.csvwriter.writerows`."""
+        return ( self.env_line.row(),
+            tuple( c.name for c in self.columns ),
+            tuple( c.unit for c in self.columns ),
+            tuple(  c.prc for c in self.columns ) )
 
 #: A type for a function that takes a :class:`ColumnHeader` and turns it into a single string. See :func:`default_col_hdr_transform`.
 ColumnHeaderTransformer = Callable[[ColumnHeader], str]
@@ -316,11 +328,13 @@ def read_header(csv_reader :Iterator[Sequence[str]], *, allow_dupes :bool = Fals
 
 def write_header(env_line :EnvironmentLine, columns :Sequence[ColumnHeader]) -> Generator[Sequence[str], None, None]:
     """Convert an :class:`EnvironmentLine` and sequence of :class:`ColumnHeader` objects back
-    into the four TOA5 header rows, suitable for use in e.g. :meth:`~csv.csvwriter.writerows`."""
-    yield ('TOA5',)+env_line
-    yield tuple( c.name for c in columns )
-    yield tuple( c.unit for c in columns )
-    yield tuple( c.prc for c in columns )
+    into the four TOA5 header rows, suitable for use in e.g. :meth:`~csv.csvwriter.writerows`.
+
+    .. deprecated:: 1.0.0
+        Use :meth:`FileHeader.rows` instead.
+    """
+    warnings.warn("Please FileHeader.rows() instead.", DeprecationWarning)
+    yield from FileHeader(env_line, tuple(columns)).rows()
 
 def read_pandas(filepath_or_buffer, *, encoding :str = 'UTF-8', encoding_errors :str = 'strict',
                 col_trans :ColumnHeaderTransformer = default_col_hdr_transform, **kwargs):

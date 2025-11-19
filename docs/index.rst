@@ -31,6 +31,7 @@ v1.0.0 - 2025-11-19
 - Stop testing for Python 3.9 and add Python 3.14
 - **Potentially incompatible change:**
   :func:`toa5.read_header` now returns the named tuple :class:`toa5.FileHeader`
+- **Deprecated** :func:`toa5.write_header` in favor of :meth:`toa5.FileHeader.rows`
 
 v0.9.2 - 2024-10-21
 ^^^^^^^^^^^^^^^^^^^
