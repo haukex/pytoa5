@@ -2,7 +2,7 @@
     /* We want to develop on the lowest version of Python this project supports, since
      * backwards compatibility issues come up more often than forward compatibility. */
     // https://github.com/devcontainers/images/tree/main/src/python
-    "image": "mcr.microsoft.com/devcontainers/python:3.9-bookworm",
+    "image": "mcr.microsoft.com/devcontainers/python:3.10-bookworm",
     "features": {
         /* `features/common-utils` is already in the python image; it's missing non-free
          * packages, but that's only manpages-posix and manpages-posix-dev. */

@@ -38,7 +38,7 @@ tasklist:	## List open tasks.
 
 installdeps:  ## Install project dependencies
 	@set -euxo pipefail
-	$(PYTHON3BIN) -m pip install --upgrade --upgrade-strategy=eager --no-warn-script-location pip wheel
+	$(PYTHON3BIN) -m pip install --upgrade --upgrade-strategy=eager --no-warn-script-location pip
 	$(PYTHON3BIN) -m pip install --upgrade --upgrade-strategy=eager --no-warn-script-location $(foreach x,$(requirement_txts),-r $(x))
 	# $(PYTHON3BIN) -m pip install --editable .  # for modules/packages
 	# other examples: git lfs install / npm ci
@@ -66,9 +66,10 @@ nix-checks:  ## Checks that depend on a *NIX OS/FS
 			test -z "$$( find . \( -type d -name '.venv*' -prune \) -o \( -iname '*.sh' ! -executable -print \) )"
 		fi
 	fi
-	$(PYTHON3BIN) -m igbpyutils.dev.script_vs_lib $${unreliable_perms:+"--exec-git"} --notice $(py_code_locs)
-	# exclusions to the above can be done via:
-	# find $(py_code_locs) -path '*/exclude/me.py' -o -type f -iname '*.py' -exec py-check-script-vs-lib --notice '{}' +
+	# exclusions to the following can be done by adding a line `-path '*/exclude/me.py' -o \` after `find`
+	find $(py_code_locs) \
+		-type f -iname '*.py' -exec \
+		$(PYTHON3BIN) -m igbpyutils.dev.script_vs_lib $${unreliable_perms:+"--exec-git"} --notice '{}' +
 
 shellcheck:  ## Run shellcheck
 	@set -euxo pipefail
@@ -89,13 +90,13 @@ other-checks:  ## Checks not depending on the Python version
 	for REQ in $(requirement_txts); do $(PYTHON3BIN) -m pur --skip-gt --dry-run-changed --nonzero-exit-code -r "$$REQ"; done
 
 unittest:  ## Run unit tests
-	@PYTHONDEVMODE=1 PYTHONWARNINGS=error PYTHONWARNDEFAULTENCODING=1 $(PYTHON3BIN) -m unittest -v
+	$(PYTHON3BIN) -X dev -X warn_default_encoding -W error -m unittest -v
 
 coverage:  ## Run unit tests with coverage
 	@set -euxo pipefail
 	# Note: Don't add command-line arguments here, put them in the rcfile
 	# We also don't use --fail_under=100 because then the report won't be written.
-	PYTHONDEVMODE=1 PYTHONWARNINGS=error PYTHONWARNDEFAULTENCODING=1 $(PYTHON3BIN) -m coverage run --rcfile=pyproject.toml
+	$(PYTHON3BIN) -X dev -X warn_default_encoding -W error -m coverage run --rcfile=pyproject.toml
 	$(PYTHON3BIN) -m coverage report --rcfile=pyproject.toml
 	# $(PYTHON3BIN) -m coverage html --rcfile=pyproject.toml
 	$(PYTHON3BIN) -m coverage xml --rcfile=pyproject.toml

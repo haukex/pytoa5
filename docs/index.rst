@@ -25,6 +25,11 @@ Documentation
 Changelog
 ---------
 
+v1.0.0 - 2025-11-19
+^^^^^^^^^^^^^^^^^^^
+
+- Drop testing in Python 3.9 and add 3.14
+
 v0.9.2 - 2024-10-21
 ^^^^^^^^^^^^^^^^^^^
 

@@ -37,7 +37,7 @@ activate_venv () {  # argument: python version (X.Y)
 }
 
 # Reminder: Keep version list in sync with `.github/workflows/tests.yml`.
-for py_ver in 3.9 3.10 3.11 3.12 3.13; do
+for py_ver in 3.10 3.11 3.12 3.13 3.14; do
     echo -e "\e[1;33m====================================================> Python $py_ver <====================================================\e[0m"
 
     if [ -e "$venv_path/.venv$py_ver" ]; then

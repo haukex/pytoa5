@@ -24,4 +24,4 @@ pushd "$temp_dir"
 $python3bin -m venv .venv
 .venv/bin/python -m pip -q install --upgrade pip
 .venv/bin/python -m pip install "$dist_file""[test]"
-.venv/bin/python -Im unittest -v
+.venv/bin/python -I -X dev -X warn_default_encoding -W error -m unittest -v

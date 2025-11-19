@@ -15,21 +15,21 @@ jobs:
       matrix:
         os: [Ubuntu, Windows, macOS]
         # Remember that some tests below only run on one version, so keep that up-to-date.
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     runs-on: ${{ matrix.os }}-latest
     steps:
       - name: Disable autocrlf on Windows
         if: ${{ matrix.os == 'Windows' }}
         # https://github.com/actions/checkout/issues/135
         run: git config --global core.autocrlf false
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: lts/*
       - name: Install pyright
         run: npm install --global pyright
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
@@ -44,7 +44,7 @@ jobs:
       - name: Run checks and lint
         run: make smoke-checks ver-checks
       - name: Run version-independent checks
-        if: ${{ matrix.python-version == '3.12' }}
+        if: ${{ matrix.python-version == '3.13' }}
         run: make other-checks
       - name: Run nix-checks and shellcheck on Linux
         if: ${{ matrix.os == 'Ubuntu' }}

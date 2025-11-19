@@ -5,22 +5,22 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "PyTOA5"
 description = "Utilities for TOA5 Files"
-version = "0.9.2"
+version = "1.0.0"
 authors = [ { name="Hauke D", email="haukex@zero-g.net" } ]
+# https://spdx.org/licenses/
+license = "LGPL-3.0-or-later"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dynamic = ["dependencies"]
 # https://pypi.org/classifiers/
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
-    #"Development Status :: 5 - Production/Stable",
-    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3.14",
+    "Development Status :: 5 - Production/Stable",
     "Operating System :: POSIX",
     "Operating System :: Unix",
     "Operating System :: Microsoft :: Windows",
@@ -36,7 +36,7 @@ packages = ["toa5", "toa5.to_csv"]
 dependencies = {file = ["requirements.txt"]}
 
 [project.optional-dependencies]
-"test" = ["pandas>=2.2.3"]
+"test" = ["pandas>=2.3.3"]
 
 [project.scripts]
 toa5-to-csv = "toa5.to_csv:main"
@@ -70,7 +70,6 @@ reportMissingParameterType = "none"
 reportMissingTypeArgument = "none"
 reportGeneralTypeIssues = "none"  # too bad there isn't more fine-grained control than this
 reportUnnecessaryTypeIgnoreComment = "none"  # this flags too many comments; we use mypy's `warn_unused_ignores` instead
-reportShadowedImports = "warning"
 reportImportCycles = "error"
 reportPropertyTypeMismatch = "warning"
 
@@ -79,6 +78,7 @@ reportPropertyTypeMismatch = "warning"
 [tool.coverage.run]
 plugins = ["coverage_simple_excludes"]
 command_line = "-m unittest -v"
+relative_files = true
 branch = true
 omit = [
     "**/.venv*/**",
@@ -164,10 +164,6 @@ ignored-modules = ["ldap"]
 # number of processors available to use, and will cap the count on Windows to
 # avoid hangs.
 jobs = 0
-
-# When enabled, pylint would attempt to guess common misconfiguration and emit
-# user-friendly hints instead of false-positive error messages.
-suggestion-mode = true
 
 [tool.pylint.basic]
 
