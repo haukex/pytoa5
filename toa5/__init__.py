@@ -38,6 +38,8 @@ The following two functions can be used to read files with this header:
 
 .. autoexception:: Toa5Error
 
+.. autodata:: HEADER_ROWS
+
 Author, Copyright, and License
 ------------------------------
 
@@ -159,8 +161,10 @@ class ColumnHeader(NamedTuple):
         return f"Unusual {', '.join(problems)}" if problems else ''
 
 class FileHeader(NamedTuple):
-    """Named tuple representing the TOA5 header, consisting of an :class:`EnvironmentLine` and a tuple of :class:`ColumnHeader`s."""
+    """Named tuple representing the TOA5 header, consisting of an :class:`EnvironmentLine` and a tuple of :class:`ColumnHeader` objects."""
+    #: This file's environment line.
     env_line :EnvironmentLine
+    #: This file's columns.
     columns :tuple[ColumnHeader, ...]
 
     def rows(self) -> tuple[tuple[str,str,str,str,str,str,str,str],tuple[str,...],tuple[str,...],tuple[str,...]]:
