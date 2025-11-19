@@ -30,7 +30,6 @@ You should have received a copy of the GNU Lesser General Public License
 along with this program. If not, see https://www.gnu.org/licenses/
 """
 import csv
-import sys
 import json
 import argparse
 import fileinput
@@ -71,11 +70,7 @@ def main(argv :Optional[Sequence[str]] = None):
     col_trans :ColumnHeaderTransformer = ( (lambda col: col.name) if args.simple_names
         else sql_col_hdr_transform if args.sql_names else default_col_hdr_transform )
 
-    if sys.hexversion >= 0x03_0A_00_00:  # cover-req-ge3.10
-        enc = { "encoding": args.in_encoding }
-    else:  # cover-req-lt3.10
-        enc = { "openhook": fileinput.hook_encoded(args.in_encoding) }
-    with (fileinput.input((args.toa5file,) if args.toa5file else (), **enc) as ifh,  # pyright: ignore [reportCallIssue, reportArgumentType]
+    with (fileinput.input((args.toa5file,) if args.toa5file else (), encoding=args.in_encoding) as ifh,
           open_out(args.out_file, encoding=args.out_encoding, newline='') as ofh):
         csv_rd = csv.reader(ifh, strict=True)
         csv_wr = csv.writer(ofh, dialect=args.out_dialect)
