@@ -22,7 +22,7 @@ jobs:
         if: ${{ matrix.os == 'Windows' }}
         # https://github.com/actions/checkout/issues/135
         run: git config --global core.autocrlf false
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: lts/*
@@ -43,9 +43,6 @@ jobs:
         run: make installdeps
       - name: Run checks and lint
         run: make smoke-checks ver-checks
-      - name: Run version-independent checks
-        if: ${{ matrix.python-version == '3.13' }}
-        run: make other-checks
       - name: Run nix-checks and shellcheck on Linux
         if: ${{ matrix.os == 'Ubuntu' }}
         # Only run nix-checks on Ubuntu because it doesn't work on Windows and bash is too old on macOS.
@@ -53,3 +50,4 @@ jobs:
         run: make nix-checks shellcheck
       - name: Tests and Coverage
         run: make coverage
+# spell-checker: ignore shellcheck installdeps

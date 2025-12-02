@@ -56,6 +56,8 @@ toa5-to-csv = "toa5.to_csv:main"
 # mypy:     ``# type: ignore[setting-name]``
 # coverage: ``# pragma: no cover``, ``# pragma: no branch``, and https://pypi.org/project/coverage-simple-excludes/
 
+# spell-checker: ignore setuptools pylint noqa mypy venv rcfile pyproject inlinevar overgeneral argparse booleaness
+
 # ##### ##### ##### ##### ##### https://github.com/microsoft/pyright/blob/main/docs/configuration.md ##### ##### ##### ##### #####
 
 [tool.pyright]

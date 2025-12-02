@@ -21,7 +21,7 @@ trap 'set +e; popd; rm -rf "$temp_dir"' EXIT
 rsync -a tests "$temp_dir" --exclude=__pycache__
 
 pushd "$temp_dir"
-$python3bin -m venv .venv
+"$python3bin" -m venv .venv
 .venv/bin/python -m pip -q install --upgrade pip
 .venv/bin/python -m pip install "$dist_file""[test]"
 .venv/bin/python -I -X dev -X warn_default_encoding -W error -m unittest -v
