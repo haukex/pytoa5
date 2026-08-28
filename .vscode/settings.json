@@ -1,4 +1,5 @@
 {
+    // This file is based on https://github.com/haukex/my-py-template/blob/main/.vscode/settings.json
     "files.eol": "\n",
     "files.trimTrailingWhitespace": true,
     "editor.rulers": [ 150 ],  // keep in sync with pyproject.toml
@@ -35,6 +36,7 @@
         "automodule",
         "battv",
         "bysource",
+        "chunksize",
         "csvwriter",
         "furo",
         "genindex",
@@ -47,7 +49,8 @@
         "relhumid",
         "seealso",
         "undoc",
-        "unitless"
+        "unitless",
+        "venv",
     ],
 }
 /* vim: set filetype=javascript ts=4 sw=4 expandtab : */

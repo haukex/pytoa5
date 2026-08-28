@@ -1,4 +1,5 @@
 {   // https://aka.ms/devcontainer.json
+    // This file is based on https://github.com/haukex/my-py-template/blob/main/.devcontainer/devcontainer.json
     /* We want to develop on the lowest version of Python this project supports, since
      * backwards compatibility issues come up more often than forward compatibility. */
     // https://github.com/devcontainers/images/tree/main/src/python

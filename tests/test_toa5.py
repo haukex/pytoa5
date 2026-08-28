@@ -3,7 +3,7 @@
 Author, Copyright, and License
 ------------------------------
 
-Copyright (c) 2023-2025 Hauke Dämpfling (haukex@zero-g.net)
+Copyright (c) 2023-2026 Hauke Dämpfling (haukex@zero-g.net)
 at the Leibniz Institute of Freshwater Ecology and Inland Fisheries (IGB),
 Berlin, Germany, https://www.igb-berlin.de/
 
@@ -32,8 +32,8 @@ from typing import Optional, Any
 from collections.abc import Callable, Sequence
 from contextlib import redirect_stdout, redirect_stderr
 from igbpyutils.file import Pushd, NamedTempFileDeleteLater
-from pandas.testing import assert_frame_equal
-import pandas
+from pandas.testing import assert_frame_equal  # pyright: ignore[reportMissingTypeStubs, reportUnknownVariableType]
+import pandas  # pyright: ignore[reportMissingTypeStubs]
 import toa5.to_csv
 import toa5
 
@@ -78,12 +78,12 @@ _exp_hdr :dict[str, tuple[tuple[toa5.ColumnHeader, str, str],...]] = {
 
 _in_path = Path(__file__).parent/'toa5'
 
-def load_tests(_loader :unittest.TestLoader, tests :unittest.TestSuite, _ignore) -> unittest.TestSuite:
-    globs :dict = {}
-    def doctest_setup(_t :doctest.DocTest):
+def load_tests(_loader :unittest.TestLoader, tests :unittest.TestSuite, _ignore :Optional[str]) -> unittest.TestSuite:
+    globs :dict[str, Any] = {}
+    def doctest_setup(_t :doctest.DocTest) -> None:
         globs['_prev_dir'] = os.getcwd()
         os.chdir( Path(__file__).parent/'doctest_wd' )
-    def doctest_teardown(_t :doctest.DocTest):
+    def doctest_teardown(_t :doctest.DocTest) -> None:
         os.chdir( globs['_prev_dir'] )
         del globs['_prev_dir']
     tests.addTests(doctest.DocTestSuite(toa5, setUp=doctest_setup, tearDown=doctest_teardown, globs=globs))
@@ -91,7 +91,7 @@ def load_tests(_loader :unittest.TestLoader, tests :unittest.TestSuite, _ignore)
 
 class Toa5TestCase(unittest.TestCase):
 
-    def test_toa5_read_write_header(self):
+    def test_toa5_read_write_header(self) -> None:
         self.assertEqual(toa5.HEADER_ROWS, 4)
 
         # read header
@@ -119,7 +119,7 @@ class Toa5TestCase(unittest.TestCase):
         # read header from an iterable (tuple is not an iterator)
         self.assertEqual(toa5.read_header(_hdr_hourly), exp_hdr)
 
-    def test_bad_toa5(self):
+    def test_bad_toa5(self) -> None:
         # various bad TOA5 files
         for fi in range(1, 13):
             with (_in_path/f'TestLogger_Hourly_Bad{fi:02d}.dat').open(encoding='ASCII', newline='') as fh:
@@ -132,7 +132,7 @@ class Toa5TestCase(unittest.TestCase):
             toa5.read_header(iter(dupe_cols))
         toa5.read_header(iter(dupe_cols), allow_dupes=True)
 
-    def test_col_valid(self):
+    def test_col_valid(self) -> None:
         good_cols :tuple[toa5.ColumnHeader, ...] = (
             toa5.ColumnHeader("Hello"," & ","World"),
             toa5.ColumnHeader("Good_Col(1,2,3)","%$*","FooBar_Quz"),
@@ -160,7 +160,7 @@ class Toa5TestCase(unittest.TestCase):
                 col.simple_checks()
             self.assertTrue( col.simple_checks(strict=False) )
 
-    def test_col_trans(self):
+    def test_col_trans(self) -> None:
         # check the transformation functions
         for tp in _exp_hdr.values():
             for ch, cn, sq in tp:
@@ -184,7 +184,7 @@ class Toa5TestCase(unittest.TestCase):
         self.assertEqual(toa5.default_col_hdr_transform(toa5.ColumnHeader("Test_Smp(1)","Deg C","Smp"),
             short_units={'Deg C':'oC'} ), "Test_Smp(1)[oC]" )
 
-    def test_pandas(self):
+    def test_pandas(self) -> None:
         el = toa5.EnvironmentLine(station_name='sn', logger_model='lm', logger_serial='ls', logger_os='os',
                                   program_name='pn', program_sig='ps', table_name='tn' )
         # basic test (detects RECORD as the Index)
@@ -262,8 +262,13 @@ class Toa5TestCase(unittest.TestCase):
             "1,2\n")
         with self.assertRaises(ValueError):
             toa5.read_pandas(fh, low_memory=False)
+        # error cases: pandas.read_csv options that would return a TextFileReader instead of a DataFrame
+        with self.assertRaisesRegex(ValueError, r': chunksize$'):
+            toa5.read_pandas(io.StringIO(), chunksize=1)
+        with self.assertRaisesRegex(ValueError, r': iterator$'):
+            toa5.read_pandas(io.StringIO(), iterator=False)
 
-    def test_to_csv_cli(self):
+    def test_to_csv_cli(self) -> None:
         with Pushd(Path(__file__).parent/'doctest_wd'):
             # basic test
             self.assertEqual( self._fake_cli(partial(toa5.to_csv.main,['-t','Example.dat'])), [

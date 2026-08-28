@@ -2,6 +2,8 @@
 set -euxo pipefail
 cd -- "$( dirname -- "${BASH_SOURCE[0]}" )"/..
 
+# This file is based on https://github.com/haukex/my-py-template/blob/main/.devcontainer/initialize.sh
+
 # set up venv in $HOME (the /workspaces mount can be slow in some containers)
 python_version="$( python -c 'import sys; print(".".join(map(str,sys.version_info[:2])))' )"
 venv_dir="$HOME/.venvs/$( basename -- "$PWD" )/.venv$python_version"

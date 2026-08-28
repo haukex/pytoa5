@@ -1,6 +1,8 @@
 ## To get help on this makefile, run `make help`.
 # https://www.gnu.org/software/make/manual/make.html
 
+# This file is based on https://github.com/haukex/my-py-template/blob/main/Makefile
+
 # Adapt these variables for this project:
 py_code_locs = toa5 tests
 # Hint: $(filter-out whatever,$(py_code_locs))
@@ -12,15 +14,19 @@ perm_checks = ./* .gitignore .vscode .github
 PYTHON3BIN = python
 
 .PHONY: help tasklist installdeps test build-check outdated
-.PHONY: smoke-checks nix-checks shellcheck ver-checks coverage unittest
+.PHONY: smoke-checks nix-checks shellcheck ver-checks coverage unittest clean
 test:   smoke-checks nix-checks shellcheck ver-checks coverage  ## Run all tests
 # Reminder: If the `test` target changes, make the appropriate changes to .github/workflows/tests.yml
 
 # spell-checker: ignore txts tasklist installdeps shellcheck FSTYPE MJSON OSTYPE devpod euxo pythonpath rcfile sdist
-# spell-checker: ignore igbpyutils ipynb msys mypy noheadings notruncate pipefail pycache pylint pyproject venv vfat
+# spell-checker: ignore igbpyutils ipynb msys mypy noheadings notruncate pipefail pycache pylint pyproject vfat pathlib
 
 SHELL = /bin/bash
 .ONESHELL:  # each recipe is executed as a single script
+
+clean:
+	@set -uxo pipefail
+	git clean -dxf -e '.venv*'
 
 build-check: smoke-checks
 	@set -euxo pipefail
@@ -61,8 +67,8 @@ smoke-checks:  ## Basic smoke tests
 nix-checks:  ## Checks that depend on a *NIX OS/FS
 	@set -euo pipefail
 	unreliable_perms="yes"
-	if [ "$$OSTYPE" == "msys" ]; then  # e.g. Git bash on Windows
-		echo "- Assuming unreliable permission bits because Windows"
+	if [[ "$$OSTYPE" =~ ^(msys|cygwin)$$ ]]; then  # e.g. Git bash on Windows
+		echo "- Assuming unreliable permission bits because OSTYPE=$$OSTYPE"
 		set -x
 	else
 		fstype="$$( findmnt --all --first --noheadings --list --output FSTYPE --notruncate --target . )"
@@ -78,6 +84,7 @@ nix-checks:  ## Checks that depend on a *NIX OS/FS
 	fi
 	# exclusions to the following can be done by adding a line `-path '*/exclude/me.py' -o \` after `find`
 	find $(py_code_locs) \
+		-path 'toa5/__init__.py' -o \
 		-type f -iname '*.py' -exec \
 		$(PYTHON3BIN) -m igbpyutils.dev.script_vs_lib $${unreliable_perms:+"--exec-git"} --notice '{}' +
 
@@ -86,13 +93,29 @@ shellcheck:  ## Run shellcheck
 	# https://www.gnu.org/software/findutils/manual/html_mono/find.html
 	find . \( -type d \( -name '.venv*' -o -name '.devpod-internal' \) -prune \) -o \( -iname '*.sh' -exec shellcheck '{}' + \)
 
+# A couple of special things about this recipe: the "; \" are needed because the `make` on macOS GH Action runners
+# doesn't support .ONESHELL. And there are some workarounds for getting the commands to run in a sandbox as well.
+# https://microsoft.github.io/pyright/#/command-line
 ver-checks:  ## Checks that depend on the Python version
-	@set -euxo pipefail
-	# https://microsoft.github.io/pyright/#/command-line
-	npx pyright --project pyproject.toml --pythonpath "$$( $(PYTHON3BIN) -c 'import sys; print(sys.executable)' )" $(py_code_locs)
-	$(PYTHON3BIN) -m mypy --config-file pyproject.toml $(py_code_locs)
-	$(PYTHON3BIN) -m flake8 --toml-config=pyproject.toml $(py_code_locs)
-	$(PYTHON3BIN) -m pylint --rcfile=pyproject.toml --recursive=y $(py_code_locs)
+	@set -euo pipefail; \
+	pyright_cfg=".tmp_pyright_config-$$$$.json"; \
+	trap 'set +ex; rm -f -- "$$pyright_cfg"' EXIT; \
+	$(PYTHON3BIN) -c "import json, pathlib, sys; prefix=pathlib.Path(sys.prefix).resolve(); json.dump({'extends':'./pyproject.toml', \
+		'venvPath':str(prefix.parent), 'venv':prefix.name, 'pythonVersion':'.'.join(map(str, sys.version_info[:2]))}, sys.stdout)" \
+		> "$$pyright_cfg"; \
+	flake8_opts=(--toml-config=pyproject.toml); \
+	pylint_opts=(--rcfile=pyproject.toml --recursive=y); \
+	if ! $(PYTHON3BIN) -c \
+			'import multiprocessing as mp;pool=mp.Pool(1);result=pool.apply(pow,(2,3));pool.close();pool.join(); assert result==8' \
+			>/dev/null 2>&1; then \
+		flake8_opts+=(--jobs=1); \
+		pylint_opts+=(--jobs=1 --persistent=no); \
+	fi; \
+	set -x; \
+	$(PYTHON3BIN) -m pyright --project "$$pyright_cfg" $(py_code_locs); \
+	$(PYTHON3BIN) -m mypy --config-file pyproject.toml $(py_code_locs); \
+	$(PYTHON3BIN) -m flake8 "$${flake8_opts[@]}" $(py_code_locs); \
+	$(PYTHON3BIN) -m pylint "$${pylint_opts[@]}" $(py_code_locs);
 
 outdated:  ## Check the dependency versions
 	@set -euo pipefail

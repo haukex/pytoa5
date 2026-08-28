@@ -12,7 +12,7 @@ to run ``toa5-to-csv --help`` or ``python -m toa5.to_csv --help`` for details.
 Author, Copyright, and License
 ------------------------------
 
-Copyright (c) 2023-2025 Hauke Dämpfling (haukex@zero-g.net)
+Copyright (c) 2023-2026 Hauke Dämpfling (haukex@zero-g.net)
 at the Leibniz Institute of Freshwater Ecology and Inland Fisheries (IGB),
 Berlin, Germany, https://www.igb-berlin.de/
 
@@ -39,7 +39,7 @@ from igbpyutils.iter import no_duplicates
 from igbpyutils.error import init_handlers
 from .. import read_header, ColumnHeader, ColumnHeaderTransformer, default_col_hdr_transform, sql_col_hdr_transform
 
-def _arg_parser():
+def _arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser('toa5.to_csv', description='TOA5 to CSV Converter',
         epilog='Details can be found at https://haukex.github.io/pytoa5/')
     parser.add_argument('-o', '--out-file', help='Output filename ("-"=STDOUT)')
@@ -56,7 +56,7 @@ def _arg_parser():
     parser.add_argument('toa5file', metavar='TOA5FILE', help='The TOA5 file to process ("-"=STDIN)', nargs='?')
     return parser
 
-def main(argv :Optional[Sequence[str]] = None):
+def main(argv :Optional[Sequence[str]] = None) -> None:
     init_handlers()
     parser = _arg_parser()
     args = parser.parse_args(argv)

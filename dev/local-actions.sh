@@ -2,6 +2,8 @@
 set -euo pipefail
 cd -- "$( dirname -- "${BASH_SOURCE[0]}" )"/..
 
+# This file is based on https://github.com/haukex/my-py-template/blob/main/dev/local-actions.sh
+
 ##### Run tests locally
 # The intention of this script is to allow the user to run the same actions as are run by the
 # GitHub Actions in the local environment, i.e. across multiple Python versions.

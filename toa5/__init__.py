@@ -43,7 +43,7 @@ The following two functions can be used to read files with this header:
 Author, Copyright, and License
 ------------------------------
 
-Copyright (c) 2023-2025 Hauke Dämpfling (haukex@zero-g.net)
+Copyright (c) 2023-2026 Hauke Dämpfling (haukex@zero-g.net)
 at the Leibniz Institute of Freshwater Ecology and Inland Fisheries (IGB),
 Berlin, Germany, https://www.igb-berlin.de/
 
@@ -66,9 +66,11 @@ import csv
 import warnings
 import importlib
 from contextlib import nullcontext
-from typing import NamedTuple, Optional, Any, Final, Literal
+from typing import NamedTuple, Optional, Any, Final, Literal, TextIO, TYPE_CHECKING
 from collections.abc import Iterable, Sequence, Generator, Callable
 from igbpyutils.iter import no_duplicates, zip_strict
+if TYPE_CHECKING:
+    import pandas  # pyright: ignore[reportMissingTypeStubs]
 
 class Toa5Error(RuntimeError):
     """An error class for :func:`read_header`."""
@@ -349,8 +351,8 @@ def write_header(env_line :EnvironmentLine, columns :Sequence[ColumnHeader]) -> 
     warnings.warn("Please FileHeader.rows() instead.", DeprecationWarning)
     yield from FileHeader(env_line, tuple(columns)).rows()
 
-def read_pandas(filepath_or_buffer, *, encoding :str = 'UTF-8', encoding_errors :str = 'strict',
-                col_trans :ColumnHeaderTransformer = default_col_hdr_transform, **kwargs):
+def read_pandas(filepath_or_buffer :str|os.PathLike[str]|TextIO, *, encoding :str = 'UTF-8', encoding_errors :str = 'strict',
+                col_trans :ColumnHeaderTransformer = default_col_hdr_transform, **kwargs :Any) -> 'pandas.DataFrame':
     """A helper function to read TOA5 files into a :class:`pandas.DataFrame`.
     Uses :func:`read_header` and :func:`pandas.read_csv` internally.
 
@@ -375,6 +377,7 @@ def read_pandas(filepath_or_buffer, *, encoding :str = 'UTF-8', encoding_errors 
     :param col_trans: The :class:`ColumnHeaderTransformer` to use to convert the :class:`ColumnHeader` objects
         into column names. Defaults to :func:`default_col_hdr_transform`
     :param kwargs: Any additional keyword arguments are passed through to :func:`pandas.read_csv`.
+        The ``chunksize`` and ``iterator`` arguments are not supported.
         It is **not recommended** to set ``header`` and ``names``, since they are provided by this function.
         Other options that this function provides by default, such as ``na_values`` or ``index_col``, may be overridden.
     :return: A :class:`pandas.DataFrame`.
@@ -383,6 +386,8 @@ def read_pandas(filepath_or_buffer, *, encoding :str = 'UTF-8', encoding_errors 
         .. note::
             At the time of writing, :attr:`pandas.DataFrame.attrs` is documented as being experimental.
     """
+    if bad_args := kwargs.keys() & {'chunksize', 'iterator'}:
+        raise ValueError(f"read_pandas doesn't support these pandas.read_csv arguments: {', '.join(sorted(bad_args))}")
     pd = importlib.import_module('pandas')
     cm :Any
     if isinstance(filepath_or_buffer, (str, os.PathLike)):
@@ -399,6 +404,6 @@ def read_pandas(filepath_or_buffer, *, encoding :str = 'UTF-8', encoding_errors 
         elif columns[0] == ColumnHeader(name='RECORD', unit='RN'):
             args['index_col'] = [0]
         args.update(kwargs)
-        df = pd.read_csv(filepath_or_buffer=fh, encoding=encoding, encoding_errors=encoding_errors, **args)
+        df :'pandas.DataFrame' = pd.read_csv(filepath_or_buffer=fh, encoding=encoding, encoding_errors=encoding_errors, **args)
         df.attrs['toa5_env_line'] = env_line
     return df

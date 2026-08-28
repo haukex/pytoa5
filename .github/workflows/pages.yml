@@ -19,11 +19,11 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v7
         with:
-          python-version: 3.13
+          python-version: 3.14
           cache: pip
           cache-dependency-path: |
             requirements.txt
@@ -33,11 +33,11 @@ jobs:
       - name: Install Docs Dependencies
         working-directory: ./docs
         run: make installdeps
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - name: Build pages
         working-directory: ./docs
         run: make
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: ./docs/html
-      - uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v5

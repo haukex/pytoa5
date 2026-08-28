@@ -1,12 +1,14 @@
 #!/bin/bash
 set -euxo pipefail
 
+# This file is based on https://github.com/haukex/my-py-template/blob/main/dev/isolated-dist-test.sh
+
 ##### Test distribution in an isolated environment
 # This test takes a built .tar.gz distribution (must be passed as first argument)
 # and runs the test suite on it in an isolated venv.
 ###
 
-python3bin="${PYTHON3BIN:-python}"
+python3bin="$( "${PYTHON3BIN:-python}" -c 'import sys; print(sys.executable)' )"
 
 usage() { echo "Usage: $0 DIST_FILE" 1>&2; exit 1; }
 [[ $# -eq 1 ]] || usage
